@@ -21,10 +21,11 @@ def test_table():
 
     node = table.Table('demo')
     node.create('Node')
-    node.addColumn('nid', 'uuid')
-    node.addColumn('title', 'varchar')
-    node.addColumn('body', 'varchar')
-    node.primaryKey('nid')
+    # node.addColumn('nid', 'uuid')
+    # node.addColumn('title', 'varchar')
+    # node.addColumn('body', 'varchar')
+    # node.primaryKey('nid')
     node = node.execute()
+
 
     assert node == 'CREATE TABLE demo.node ( nid uuid, title varchar, body varchar, PRIMARY KEY (nid));'
