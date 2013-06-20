@@ -30,12 +30,25 @@ def test_table():
     assert node == 'CREATE TABLE demo.node ( body varchar, nid uuid, title varchar, PRIMARY KEY (nid) )'
 
     columns = dict([('UID', 'uuid'), ('username', 'VARCHAR'), ('Email', 'varchar')])
-    node = table.Table('TEST')
-    node.create('USERS')
-    node.addColumn(columns)
-    node.addColumn({'Reg': 'varchar'})
-    node.primaryKey(('UID', 'Reg'))
-    node = node.execute()
+    user = table.Table('TEST')
+    user.create('USERS')
+    user.addColumn(columns)
+    user.addColumn({'Reg': 'varchar'})
+    user.primaryKey(('Username', 'Reg'))
+    user = user.execute()
 
-    assert node == 'CREATE TABLE test.users ( uid uuid, username varchar, email varchar, reg varchar, ' \
-                   'PRIMARY KEY (uid, reg) )'
+    assert user == 'CREATE TABLE test.users ( username varchar, uid uuid, reg varchar, email varchar, ' \
+                   'PRIMARY KEY (username, reg) )'
+
+    columns = dict([('UID', 'uuid'), ('username', 'VARCHAR'), ('Email', 'varchar')])
+
+    user = table.Table('TEST')
+    user.create('USERS')
+    user.addColumn(columns)
+    user.addColumn({'Reg': 'varchar'})
+    user.primaryKey(('username', 'Reg'))
+    user.options({'_CASE-SENSITIVE_': True})
+    user = user.execute()
+
+    assert user == 'CREATE TABLE TEST.USERS ( username VARCHAR, Reg varchar, UID uuid, Email varchar, ' \
+                   'PRIMARY KEY (username, Reg) )'
