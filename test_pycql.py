@@ -21,11 +21,21 @@ def test_table():
 
     node = table.Table('demo')
     node.create('Node')
-    # node.addColumn('nid', 'uuid')
-    # node.addColumn('title', 'varchar')
-    # node.addColumn('body', 'varchar')
-    # node.primaryKey('nid')
+    node.addColumn({'nid': 'uuid'})
+    node.addColumn({'title': 'varchar'})
+    node.addColumn({'body': 'varchar'})
+    node.primaryKey('nid')
     node = node.execute()
 
+    assert node == 'CREATE TABLE demo.node ( body varchar, nid uuid, title varchar, PRIMARY KEY (nid) )'
 
-    assert node == 'CREATE TABLE demo.node ( nid uuid, title varchar, body varchar, PRIMARY KEY (nid));'
+    columns = dict([('UID', 'uuid'), ('username', 'VARCHAR'), ('Email', 'varchar')])
+    node = table.Table('TEST')
+    node.create('USERS')
+    node.addColumn(columns)
+    node.addColumn({'Reg': 'varchar'})
+    node.primaryKey(('UID', 'Reg'))
+    node = node.execute()
+
+    assert node == 'CREATE TABLE test.users ( uid uuid, username varchar, email varchar, reg varchar, ' \
+                   'PRIMARY KEY (uid, reg) )'

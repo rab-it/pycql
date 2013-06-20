@@ -1,13 +1,14 @@
 __author__ = 'rabit'
 
-from string import Template
+import re
 
 
 class Table():
     def __init__(self, keyspace=None, case_sensitive=False):
         self._queries = {
-            '_CREATE-TABLE_': 'CREATE TABLE {{_KEYSPACE_}}.{{_TABLE_}} ( [[_COLUMNDEF_|, ]] ) '
-                              'WITH [[_PROPERTIES_|_OP_]]'
+            '_CREATE-TABLE_': 'CREATE TABLE %(_KEYSPACE_)s.%(_TABLE_)s ( [[_COLUMNDEF_|, ]], '
+                              'PRIMARY KEY (%(_PRIMARYKEY_)s) )'
+                              # 'WITH [[_PROPERTIES_|_OP_]]'
         }
         self._placeholder = dict([('_KEYSPACE_', keyspace)])
         self._options = dict([('_CASE-SENSITIVE_', case_sensitive)])
@@ -19,22 +20,42 @@ class Table():
 
         return self
 
-    def addColumn(self, column_name, column_type):
-        self._query = self._query + column_name + ' ' + column_type + ', '
+    def addColumn(self, colname_values):
+        if '_COLUMNDEF_' not in self._placeholder:
+            self._placeholder['_COLUMNDEF_'] = dict()
+        self._placeholder['_COLUMNDEF_'].update(colname_values)
+        # print self._placeholder, colname_values
+
         return self
 
     def primaryKey(self, key):
-        self._query = self._query + 'PRIMARY KEY (' + key + ')'
-        print self._query
+        self._placeholder['_PRIMARYKEY_'] = key
+        print key
         return self
 
     def render(self):
-        render = ''
-        print(self._placeholder)
-        for placeholder, value in self._placeholder.items():
-            render = self._queries[self._query].replace('{{' + placeholder + '}}', value)
+
+        pattern = r'\[\[_[A-Z-]*_\|.*?\]\]'
+
+        placeholders = re.findall(pattern, self._queries[self._query])
+        print placeholders
+
+        for item in placeholders:
+            # print(item)
+            pattern2 = r'\[\[(_[A-Z-]*_)\|(.*?)\]\]'
+            match = re.match(pattern2, item).groups()
+
+            if match[0] in self._placeholder:
+                column_defs = self._placeholder[match[0]]
+                self._placeholder[match[0]] = match[1].join(['%s %s' % (key, value) for (key, value) in column_defs.items()])
+
+        pattern3 = r'\[\[(_[A-Z-]*_)\|.*?\]\]'
+        self._queries[self._query] = re.sub(pattern3, r'%(\1)s', self._queries[self._query])
+
+        render = self._queries[self._query] % self._placeholder
 
         self._render = render
+
         return self
 
     def execute(self):
