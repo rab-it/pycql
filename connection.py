@@ -6,17 +6,15 @@ import random
 import cql
 import logging
 from copy import copy
-from pycql.exceptions import PycqlException
+# from exceptions import PycqlException
 from contextlib import contextmanager
 from thrift.transport.TTransport import TTransportException
-
 
 
 LOG = logging.getLogger('pycql.cql')
 Host = namedtuple('Host', ['name', 'port', 'keyspace'])
 _max_connections = 25
 connection_pool = None
-
 
 
 def setup(hosts, username=None, password=None, max_connections=25, keyspace=None):
@@ -46,8 +44,9 @@ def setup(hosts, username=None, password=None, max_connections=25, keyspace=None
     connection_pool = ConnectionPool(_hosts, username, password)
 
 
+class CQLConnectionError(Exception):
+    pass
 
-class CQLConnectionError(PycqlException): pass
 
 class ConnectionPool(object):
     """Handles pooling of database connections."""
@@ -128,11 +127,12 @@ class ConnectionPool(object):
             self.put(con)
             return cur
         except cql.ProgrammingError as ex:
-            raise PycqlException(unicode(ex))
+            raise Exception(unicode(ex))
         except TTransportException:
             pass
 
-        raise PycqlException("Could not execute query against the cluster")
+        raise Exception("Could not execute query against the cluster")
+
 
 def execute(query, params={}):
     return connection_pool.execute(query, params)

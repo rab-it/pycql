@@ -3,11 +3,16 @@ __author__ = 'rabit'
 import connection
 import table
 
-def setup_func():
-    connection.setup(['localhost:9160:quantweb', 'localhost:9145:quantweb'])
-    execute_obj = connection.execute("INSERT INTO songs (id, title)VALUES (62c36092-82a1-3a00-93d1-46196ee77211, 'Come away');")
-    return True if execute_obj else False
 
+# from table import Table
+#
+# def setup_func():
+#     connection.setup(['localhost:9160:quantweb', 'localhost:9145:quantweb'])
+#     execute_obj = connection.execute("INSERT INTO songs (id, title)VALUES (62c36092-82a1-3a00-93d1-46196ee77211, 'Come away');")
+#     return True if execute_obj else False
+#
+# def test_setup():
+#     assert setup_func() == True
 
 '''
 def test_select():
@@ -19,7 +24,7 @@ def test_add():
     assert connect.add(5,6) == 11
     assert connect.add(50,25) == 75
     assert connect.add(-50,25) == -25
-'''
+
 
 
 def test_table():
@@ -58,5 +63,20 @@ def test_table():
     assert user == 'CREATE TABLE TEST.USERS ( username VARCHAR, Reg varchar, UID uuid, Email varchar, ' \
                    'PRIMARY KEY (username, Reg) )'
 
-def test_setup():
-    assert setup_func() == True
+'''
+
+connection.setup(['localhost:9160:demodb', 'localhost:9145:quantweb'])
+
+
+def select(*columns):
+    columns = list(columns)
+
+    columns_names = ', '.join(columns)
+    execute_obj = connection.execute("SELECT " + columns_names + " FROM users")
+
+    # pycql = connect()
+    # pycql.execute("SELECT " + columns_names + " FROM songs")
+
+    return execute_obj.fetchall()
+
+print select('user_name')

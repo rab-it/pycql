@@ -55,7 +55,6 @@ class Table():
                         self._placeholder[key].update({dict_key.lower(): dict_value.lower()})
 
         placeholders = re.findall(pattern_loop_holder, self._queries[self._query])
-        print placeholders
 
         for item in placeholders:
             # print(item)
