@@ -24,7 +24,7 @@ def test_add():
     assert connect.add(5,6) == 11
     assert connect.add(50,25) == 75
     assert connect.add(-50,25) == -25
-
+'''
 
 
 def test_table():
@@ -63,7 +63,7 @@ def test_table():
     assert user == 'CREATE TABLE TEST.USERS ( username VARCHAR, Reg varchar, UID uuid, Email varchar, ' \
                    'PRIMARY KEY (username, Reg) )'
 
-'''
+
 
 connection.setup(['localhost:9160:demodb', 'localhost:9145:quantweb'])
 
