@@ -18,12 +18,7 @@ class Table(Base):
 
 class Column(Base):
 
-    def uuid(self, name):
-        self._placeholder['_COLUMNDEF_'].update({name: 'uuid'})
-        print(self._placeholder)
-
     def addColumn(self, *columns):
-        print (columns)
 
         if columns:
             if '_COLUMNDEF_' not in self._placeholder:
@@ -31,17 +26,29 @@ class Column(Base):
 
             if isinstance(columns[0], str) and len(columns) == 2:
                 self._placeholder['_COLUMNDEF_'].update({columns[0]: columns[1]})
-                print(self._placeholder)
+                # print(self._placeholder)
             elif isinstance(columns[0], dict) and len(columns) == 1:
                 self._placeholder['_COLUMNDEF_'].update(columns[0])
-                print(self._placeholder)
+                # print(self._placeholder)
             else:
                 raise Exception("Invalid Column Definition")
 
         return self
 
 
-class CreateTable():
+cql_types = ('ascii', 'bigint', 'blob', 'boolean', 'counter', 'decimal', 'double', 'float', 'inet',
+             'int', 'list', 'map', 'set', 'text', 'timestamp', 'uuid', 'timeuuid', 'varchar', 'varint')
+
+def type_closure(type_name):
+    def typeof(self, name):
+        self._placeholder['_COLUMNDEF_'].update({name: type_name})
+    return typeof
+
+for types in cql_types:
+    setattr(Column, types, type_closure(types))
+
+
+class CreateTable(Base):
     def __init__(self):
         self._cql_commands = {'_CREATE-TABLE_': 'CREATE TABLE %(_TABLE_)s ( [[_COLUMNDEF_]], ) ',
                               '_COLUMNDEF_': {}
@@ -49,7 +56,7 @@ class CreateTable():
         self.addColumn = Column().addColumn
 
 
-class AlterTable():
+class AlterTable(Base):
     def __init__(self):
         self._cql_commands = {'_ALTER-TABLE_': 'ALTER TABLE %(_TABLE_)s'}
 
@@ -67,13 +74,12 @@ class Render():
 
 
 if __name__ == '__main__':
-    node = Table('user')
+    node = Table('user').Create()
+    node.addColumn('uid', 'uuid')
+    node.addColumn({'uid': 'uuid', 'kdi': 'sdf'})
+    node.addColumn().ascii('mid')
+    node.addColumn().timestamp('mdk')
     node.execute()
-    # .Create()
-    # node.addColumn('uid', 'uuid')
-    # node.addColumn({'uid': 'uuid', 'kdi': 'sdf'})
-    # node.addColumn().uuid('mid')
-    # node.
 
-    print(node)
+    print(node._placeholder)
 
