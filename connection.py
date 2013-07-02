@@ -13,13 +13,13 @@ from thrift.transport.TTransport import TTransportException
 
 
 LOG = logging.getLogger('pycql.cql')
-Host = namedtuple('Host', ['name', 'port', 'keyspace'])
+Host = namedtuple('Host', ['name', 'port'])
 _max_connections = 25
 connection_pool = None
 
 
 
-def setup(hosts, username=None, password=None, max_connections=25, keyspace=None):
+def setup(hosts, username=None, password=None, max_connections=25):
     """
     Records the hosts and connects to one of them
 
@@ -34,8 +34,8 @@ def setup(hosts, username=None, password=None, max_connections=25, keyspace=None
         host = host.strip()
         host = host.split(':')
         if len(host) == 1:
-            _hosts.append(Host(host[0], 9160, keyspace))
-        elif len(host) == 3:
+            _hosts.append(Host(host[0], 9160))
+        elif len(host) == 2:
             _hosts.append(Host(*host))
         else:
             raise CQLConnectionError("Can't parse {}".format(''.join(host)))
@@ -111,11 +111,11 @@ class ConnectionPool(object):
 
         for host in hosts:
             try:
-                new_conn = cql.connect(host.name, host.port, keyspace=host.keyspace, user=self._username, password=self._password)
+                new_conn = cql.connect(host.name, host.port, user=self._username, password=self._password)
                 new_conn.set_cql_version('3.0.0')
                 return new_conn
             except Exception as e:
-                logging.debug("Could not establish connection to {} at {}:{}".format(host.keyspace, host.name, host.port))
+                logging.debug("Could not establish connection to {}:{}".format(host.name, host.port))
                 pass
 
         raise CQLConnectionError("Could not connect to any server in cluster")
