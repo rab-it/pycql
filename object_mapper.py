@@ -10,7 +10,6 @@ class Base():
 
 class Table(Base):
     def __init__(self, table_name, keyspace=None):
-        self.string = table_name + ': '
         keyspace = keyspace if keyspace is not None else self._default_keyspace
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name
         self.Create = CreateTable
@@ -22,6 +21,7 @@ class CreateTable(Base):
                               '_COLUMNDEF_': {}
                               }
         self.addColumn = Column().addColumn
+        self.setPrimaryKey = Column().setPrimaryKey
 
 
 class AlterTable(Base):
@@ -29,12 +29,16 @@ class AlterTable(Base):
         self._cql_commands = {'_ALTER-TABLE_': 'ALTER TABLE %(_TABLE_)s'}
 
 
+class TableOptions(Base):
+    pass
+
+
 class Column(Base):
 
-    def __setKey(self):
-        if '_COLUMNDEF_' not in self._placeholder or not self._placeholder['_COLUMNDEF_']:
+    def __setPlaceholderKey(self, key, value_type):
+        if key not in self._placeholder or not self._placeholder[key]:
             # if provided key is not available or if the value is empty
-            self._placeholder['_COLUMNDEF_'] = dict()
+            self._placeholder[key] = value_type
 
     def __setCqlType(self, name, cql_type, collection=None):
         """
@@ -44,7 +48,7 @@ class Column(Base):
         :param cql_type: String (general) or Tuple (if collection == 'map')
         :param collection: 'set' | 'list'
         """
-        self.__setKey()
+        self.__setPlaceholderKey('_COLUMNDEF_', dict())
 
         if collection in ('set', 'list'):
             cql_type = str(collection) + '<' + str(cql_type) + '>'
@@ -101,7 +105,7 @@ class Column(Base):
     def type_varint(self, name, collection=None):
         self.__setCqlType(name, 'varint', collection)
 
-    """ method for set, list and map """
+    # Method for set, list and map
     def type_list(self, name, cql_type):
         self.__setCqlType(name, cql_type, 'list')
 
@@ -119,7 +123,7 @@ class Column(Base):
         :return: :raise:
         """
         if columns:
-            self.__setKey()
+            self.__setPlaceholderKey('_COLUMNDEF_', dict())
 
             if isinstance(columns[0], str) and len(columns) == 2:
                 self._placeholder['_COLUMNDEF_'].update({columns[0]: columns[1]})
@@ -139,6 +143,25 @@ class Column(Base):
     def delColumn(self):
         # Todo
         pass
+
+    def setPrimaryKey(self, *keys):
+        self._placeholder['_PRIMARY-KEY_'] = dict()
+
+        first = True
+
+        for key in keys:
+            if first:
+                first = False
+                if isinstance(key, tuple):
+                    self._placeholder['_PRIMARY-KEY_']['composite'] = [item for item in key]
+                elif isinstance(key, str):
+                    self._placeholder['_PRIMARY-KEY_']['composite'] = key
+                else:
+                    raise Exception("Invalid Primary Key")
+            else:
+                if 'compound' not in self._placeholder['_PRIMARY-KEY_'] or not self._placeholder['_PRIMARY-KEY_']['compound']:
+                    self._placeholder['_PRIMARY-KEY_']['compound'] = list()
+                self._placeholder['_PRIMARY-KEY_']['compound'].append(key)
 
 
 class Render():

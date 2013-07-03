@@ -33,3 +33,23 @@ def test_table():
     user.addColumn().type_map('todo', ('timestamp', 'text'))
     assert user._placeholder['_COLUMNDEF_']['todo'] == 'map<timestamp, text>'
 
+    user._placeholder['_COLUMNDEF_'] = {}
+    user.addColumn({'name': 'varchar', 'email': 'text'})
+    user.addColumn().type_uuid('uid')
+    user.setPrimaryKey('uid')
+    assert user._placeholder['_PRIMARY-KEY_']['composite'] == 'uid'
+
+    user._placeholder['_COLUMNDEF_'] = {}
+    user.addColumn({'name': 'varchar', 'email': 'text'})
+    user.addColumn().type_uuid('uid')
+    user.setPrimaryKey('uid', 'email')
+    assert user._placeholder['_PRIMARY-KEY_']['composite'] == 'uid'
+    assert user._placeholder['_PRIMARY-KEY_']['compound'] == ['email']
+
+    user.setPrimaryKey('uid', 'username', 'phone')
+    assert user._placeholder['_PRIMARY-KEY_']['composite'] == 'uid'
+    assert user._placeholder['_PRIMARY-KEY_']['compound'] == ['username', 'phone']
+
+    user.setPrimaryKey(('uid', 'timezone'), 'username', 'phone')
+    assert user._placeholder['_PRIMARY-KEY_']['composite'] == ['uid', 'timezone']
+    assert user._placeholder['_PRIMARY-KEY_']['compound'] == ['username', 'phone']
