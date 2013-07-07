@@ -1,7 +1,11 @@
+import re
+
+
 class Base():
     _default_keyspace = 'demodb'
     _placeholder = dict()
     _cql_commands = dict()
+    _main_query = ''
 
     def execute(self):
         string = Render().render(self)
@@ -17,9 +21,18 @@ class Table(Base):
 
 class CreateTable(Base):
     def __init__(self):
-        self._cql_commands = {'_CREATE-TABLE_': 'CREATE TABLE %(_TABLE_)s ( [[_COLUMNDEF_]], ) ',
-                              '_COLUMNDEF_': {}
+        """
+        _cql_commands is a dictionary containing Lexical structures of cql commands.
+        <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
+
+        """
+
+        self._cql_commands = {'_CREATE-TABLE_': 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, '
+                                                '%(<_PRIMARY-KEY_>)s )',
                               }
+
+        self._main_query = '_CREATE-TABLE_'
+
         self.addColumn = Column().addColumn
         self.setPrimaryKey = Column().setPrimaryKey
 
@@ -52,6 +65,8 @@ class Column(Base):
 
         if collection in ('set', 'list'):
             cql_type = str(collection) + '<' + str(cql_type) + '>'
+        elif collection is True:
+            self.setPrimaryKey(name)
         elif collection == 'map' and isinstance(cql_type, tuple):
             cql_type = collection + '<' + ', '.join(cql_type) + '>'
 
@@ -128,6 +143,9 @@ class Column(Base):
             if isinstance(columns[0], str) and len(columns) == 2:
                 self._placeholder['_COLUMNDEF_'].update({columns[0]: columns[1]})
                 # print(self._placeholder)
+            elif isinstance(columns[0], str) and columns[2] is True:
+                self._placeholder['_COLUMNDEF_'].update({columns[0]: columns[1]})
+                self.setPrimaryKey(columns[0])
             elif isinstance(columns[0], dict) and len(columns) == 1:
                 self._placeholder['_COLUMNDEF_'].update(columns[0])
                 # print(self._placeholder)
@@ -159,9 +177,9 @@ class Column(Base):
                 else:
                     raise Exception("Invalid Primary Key")
             else:
-                if 'compound' not in self._placeholder['_PRIMARY-KEY_'] or not self._placeholder['_PRIMARY-KEY_']['compound']:
-                    self._placeholder['_PRIMARY-KEY_']['compound'] = list()
-                self._placeholder['_PRIMARY-KEY_']['compound'].append(key)
+                if 'clustering' not in self._placeholder['_PRIMARY-KEY_'] or not self._placeholder['_PRIMARY-KEY_']['clustering']:
+                    self._placeholder['_PRIMARY-KEY_']['clustering'] = list()
+                self._placeholder['_PRIMARY-KEY_']['clustering'].append(key)
 
 
 class Render():
@@ -169,22 +187,98 @@ class Render():
     def validate(self):
         pass
 
+    def _placeholders(self):
+
+        functions = {'_TABLE_': self._placeholder['_TABLE_'],
+                     '_COLUMNDEF_': self.__renderColumndef(),
+                     '_PRIMARY-KEY_': self.__renderPK()
+                     }
+
+        return functions
+
+    def __renderColumndef(self):
+        if self._placeholder['_COLUMNDEF_']:
+            return ', '.join(['%s %s' % (key, value) for (key, value) in self._placeholder['_COLUMNDEF_'].items()])
+
+    def __validatePK(self):
+        if 'composite' in self._placeholder['_PRIMARY-KEY_']:
+            pk_dict = self._placeholder['_PRIMARY-KEY_']
+            for pk_type in pk_dict:
+                if isinstance(pk_dict[pk_type], list):
+                    for pk in pk_dict[pk_type]:
+                        if not pk in self._placeholder['_COLUMNDEF_']:
+                            raise Exception('{} key {} is not a column'.format(pk_type.title(), pk))
+                else:
+                    if not pk_dict[pk_type] in self._placeholder['_COLUMNDEF_']:
+                        raise Exception('{} key {} is not a column'.format(pk_type.title(), pk_dict[pk_type]))
+
+        else:
+            raise Exception('Primary key is required')
+
+    def __renderPK(self):
+
+        self.__validatePK()
+
+        pk_dict = self._placeholder['_PRIMARY-KEY_']
+
+        pk = 'PRIMARY KEY ('
+
+        if isinstance(pk_dict['composite'], list):
+            pk += '(' + ', '.join(pk_dict['composite']) + ')'
+        else:
+            pk += pk_dict['composite']
+
+        if 'clustering' in pk_dict:
+            pk += ', ' + ', '.join(pk_dict['clustering'])
+
+        pk += ')'
+
+        return pk
+
     def render(self, obj):
-        self.string = ''
-        for k, v in obj._cql_commands.items():
-            self.string += str(v)
-        return self.string
+
+        self._placeholder = obj._placeholder
+        self._cql_commands = obj._cql_commands
+        self._main_query = obj._main_query
+
+        pattern_query_placeholder = r'<(_[A-Z-]*?_)>'
+
+        query_with_placeholders = re.sub(pattern_query_placeholder, r'\1', self._cql_commands[self._main_query])
+        print(query_with_placeholders)
+
+        render = query_with_placeholders % self._placeholders()
+        print (render)
+        return render
 
 
 if __name__ == '__main__':
-    node = Table('user').Create()
-    node.addColumn('uid', 'uuid')
-    node.addColumn({'uid': 'uuid', 'kdi': 'sdf'})
-    node.addColumn().type_ascii('char')
-    node.addColumn().type_boolean('gender')
-    node.addColumn().type_varchar('name')
-    # node.addColumn().timestamp('mdk')
-    node.execute()
+    user = Table('user').Create()
+    user.addColumn('uid', 'uuid')
 
-    print(node._placeholder)
+    user.addColumn({'uid': 'uuid', 'email': 'text'})
 
+    user.addColumn().type_ascii('char')
+
+    user.addColumn().type_varchar('username')
+
+    user.addColumn().type_text('email', 'set')
+
+    user.addColumn().type_list('fav_post', 'varchar')
+
+    user.addColumn().type_map('todo', ('timestamp', 'text'))
+
+    user.addColumn({'name': 'varchar', 'email': 'text'})
+    user.addColumn().type_uuid('uid')
+    user.setPrimaryKey('uid')
+
+    user.addColumn({'name': 'varchar', 'email': 'text', 'phone': 'text'})
+    user.addColumn().type_uuid('uid')
+    user.setPrimaryKey('uid', 'email')
+
+    user.setPrimaryKey('uid', 'email', 'phone')
+
+    user.setPrimaryKey(('uid', 'email'), 'username', 'phone')
+
+    user.execute()
+
+    # print(user._placeholder)
