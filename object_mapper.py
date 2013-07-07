@@ -20,26 +20,45 @@ class Table(Base):
 
 
 class CreateTable(Base):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """
         _cql_commands is a dictionary containing Lexical structures of cql commands.
         <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
 
         """
 
-        self._cql_commands = {'_CREATE-TABLE_': 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, '
-                                                '%(<_PRIMARY-KEY_>)s )',
-                              }
-
-        self._main_query = '_CREATE-TABLE_'
+        self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
 
         self.addColumn = Column().addColumn
         self.setPrimaryKey = Column().setPrimaryKey
 
+        if args or kwargs:
+            self.options(*args, **kwargs)
+
+    def options(self, *args, **kwargs):
+        optionsList = ('compression', 'compaction', 'compact', 'bloom_filter_fp_chance', 'caching', 'comment',
+                       'dclocal_read_repair_chance', 'gc_grace_seconds', 'read_repair_chance', 'replicate_on_write')
+
+        if args and isinstance(args[0], dict):
+            for k, v in args[0].items():
+                if k not in optionsList:
+                    raise Exception('Invalid option')
+        elif kwargs:
+            for k, v in kwargs.items():
+                if k not in optionsList:
+                    raise Exception('Invalid option')
+
+            if '_OPTIONS_' in self._placeholder:
+                self._placeholder['_OPTIONS_'].update(kwargs)
+            else:
+                self._placeholder['_OPTIONS_'] = kwargs
+
+            print(str(self._placeholder)[275:])
+
 
 class AlterTable(Base):
     def __init__(self):
-        self._cql_commands = {'_ALTER-TABLE_': 'ALTER TABLE %(_TABLE_)s'}
+        self._main_query = 'ALTER TABLE %(_TABLE_)s'
 
 
 class TableOptions(Base):
@@ -191,10 +210,31 @@ class Render():
 
         functions = {'_TABLE_': self._placeholder['_TABLE_'],
                      '_COLUMNDEF_': self.__renderColumndef(),
-                     '_PRIMARY-KEY_': self.__renderPK()
+                     '_PRIMARY-KEY_': self.__renderPK(),
+                     '_OPTIONS_': self.__renderOptions(),
                      }
 
         return functions
+
+    def __renderOptions(self):
+        opt = ''
+        opt_dict = self._placeholder['_OPTIONS_']
+
+        if opt_dict:
+            opt_dict['_PROPERTIES_'] = list()
+            opt += 'WITH '
+
+            compact = opt_dict.pop('compact', None)
+            if compact:
+                opt_dict['_PROPERTIES_'].append('COMPACT STORAGE')
+
+            if opt_dict:
+                opt_dict['_PROPERTIES_'] += (['{} = {}'.format(k, v) for (k, v) in opt_dict.items()
+                                              if not re.search(r'_[A-Z-]*?_', k)])
+
+            opt += ' AND '.join(opt_dict['_PROPERTIES_'])
+
+        return opt
 
     def __renderColumndef(self):
         if self._placeholder['_COLUMNDEF_']:
@@ -238,16 +278,14 @@ class Render():
     def render(self, obj):
 
         self._placeholder = obj._placeholder
-        self._cql_commands = obj._cql_commands
         self._main_query = obj._main_query
 
         pattern_query_placeholder = r'<(_[A-Z-]*?_)>'
 
-        query_with_placeholders = re.sub(pattern_query_placeholder, r'\1', self._cql_commands[self._main_query])
-        print(query_with_placeholders)
+        query_with_placeholders = re.sub(pattern_query_placeholder, r'\1', self._main_query)
 
         render = query_with_placeholders % self._placeholders()
-        print (render)
+        print (render[156:])
         return render
 
 
@@ -278,6 +316,10 @@ if __name__ == '__main__':
     user.setPrimaryKey('uid', 'email', 'phone')
 
     user.setPrimaryKey(('uid', 'email'), 'username', 'phone')
+
+    user.options({'compression': 'guys', 'compaction': 'guys'})
+    user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'}, compact=True)
+    user.options(caching='hellow', comment='hou mou')
 
     user.execute()
 

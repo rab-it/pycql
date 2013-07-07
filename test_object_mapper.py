@@ -95,4 +95,10 @@ def test_Create_table():
     render = renderUser.execute()
     assert 'PRIMARY KEY (uid)' in render
 
+    ###
+    ### Table Options test
+    ###
+    user = object_mapper.Table('user')
+    user.Create().options({'hello': 'guys'})
+
 
