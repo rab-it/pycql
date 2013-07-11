@@ -1,36 +1,45 @@
 import re
 
+#
+# class Base(object):
+#
+#     def __init__(self):
+#         _default_keyspace = 'demodb'
+#         _placeholder = dict()
+#         # _cql_commands = dict()
+#         _main_query = ''
+#
+#     def execute(self):
+#         string = Render().render(self)
+#         return string
 
-class Base():
-    _default_keyspace = 'demodb'
-    _placeholder = dict()
-    _cql_commands = dict()
-    _main_query = ''
 
-    def execute(self):
-        string = Render().render(self)
-        return string
-
-
-class Table(Base):
+class Table(object):
     def __init__(self, table_name, keyspace=None):
-        keyspace = keyspace if keyspace is not None else self._default_keyspace
+
+        __default_keyspace = 'demodb'
+        self._placeholder = dict()
+
+        keyspace = keyspace if keyspace is not None else __default_keyspace
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name
-        self.Create = CreateTable
+        # self.Create = CreateTable
+
+    def create(self, *args, **kwargs):
+        return CreateTable(self, args, **kwargs)
 
 
-class CreateTable(Base):
-    def __init__(self, *args, **kwargs):
+class CreateTable(object):
+    def __init__(self, obj, *args, **kwargs):
         """
         _cql_commands is a dictionary containing Lexical structures of cql commands.
         <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
 
         """
-
+        self._placeholder = obj._placeholder
         self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
 
-        self.addColumn = Column().addColumn
-        self.setPrimaryKey = Column().setPrimaryKey
+        self.addColumn = Column(self).addColumn
+        self.setPrimaryKey = Column(self).setPrimaryKey
 
         if args or kwargs:
             self.options(*args, **kwargs)
@@ -53,19 +62,27 @@ class CreateTable(Base):
             else:
                 self._placeholder['_OPTIONS_'] = kwargs
 
-            print(str(self._placeholder)[275:])
+        return self
+
+    def execute(self):
+        string = Render().render(self)
+        return string
 
 
-class AlterTable(Base):
+class AlterTable():
     def __init__(self):
         self._main_query = 'ALTER TABLE %(_TABLE_)s'
 
 
-class TableOptions(Base):
+class TableOptions():
     pass
 
 
-class Column(Base):
+class Column():
+
+    def __init__(self, obj):
+        self._main_query = obj._main_query
+        self._placeholder = obj._placeholder
 
     def __setPlaceholderKey(self, key, value_type):
         if key not in self._placeholder or not self._placeholder[key]:
@@ -217,31 +234,36 @@ class Render():
         return functions
 
     def __renderOptions(self):
+
         opt = ''
+        if '_OPTIONS_' not in self._placeholder:
+            return opt
+
         opt_dict = self._placeholder['_OPTIONS_']
 
+        opt_dict['_PROPERTIES_'] = list()
+        opt += 'WITH '
+
+        compact = opt_dict.pop('compact', None)
+        if compact:
+            opt_dict['_PROPERTIES_'].append('COMPACT STORAGE')
+
         if opt_dict:
-            opt_dict['_PROPERTIES_'] = list()
-            opt += 'WITH '
+            opt_dict['_PROPERTIES_'] += (['{} = {}'.format(k, v) for (k, v) in opt_dict.items()
+                                          if not re.search(r'_[A-Z-]*?_', k)])
 
-            compact = opt_dict.pop('compact', None)
-            if compact:
-                opt_dict['_PROPERTIES_'].append('COMPACT STORAGE')
-
-            if opt_dict:
-                opt_dict['_PROPERTIES_'] += (['{} = {}'.format(k, v) for (k, v) in opt_dict.items()
-                                              if not re.search(r'_[A-Z-]*?_', k)])
-
-            opt += ' AND '.join(opt_dict['_PROPERTIES_'])
+        opt += ' AND '.join(opt_dict['_PROPERTIES_'])
 
         return opt
 
     def __renderColumndef(self):
-        if self._placeholder['_COLUMNDEF_']:
+        if '_COLUMNDEF_' in self._placeholder:
             return ', '.join(['%s %s' % (key, value) for (key, value) in self._placeholder['_COLUMNDEF_'].items()])
+        else:
+            return ''
 
     def __validatePK(self):
-        if 'composite' in self._placeholder['_PRIMARY-KEY_']:
+        if '_PRIMARY-KEY_' in self._placeholder and 'composite' in self._placeholder['_PRIMARY-KEY_']:
             pk_dict = self._placeholder['_PRIMARY-KEY_']
             for pk_type in pk_dict:
                 if isinstance(pk_dict[pk_type], list):
@@ -257,11 +279,16 @@ class Render():
 
     def __renderPK(self):
 
+        pk = ''
+
+        if '_PRIMARY-KEY_' not in self._placeholder:
+            return pk
+
         self.__validatePK()
 
         pk_dict = self._placeholder['_PRIMARY-KEY_']
 
-        pk = 'PRIMARY KEY ('
+        pk += 'PRIMARY KEY ('
 
         if isinstance(pk_dict['composite'], list):
             pk += '(' + ', '.join(pk_dict['composite']) + ')'
@@ -285,12 +312,12 @@ class Render():
         query_with_placeholders = re.sub(pattern_query_placeholder, r'\1', self._main_query)
 
         render = query_with_placeholders % self._placeholders()
-        print (render[156:])
+        print (render)
         return render
 
 
 if __name__ == '__main__':
-    user = Table('user').Create()
+    user = Table('user').create()
     user.addColumn('uid', 'uuid')
 
     user.addColumn({'uid': 'uuid', 'email': 'text'})
@@ -323,4 +350,8 @@ if __name__ == '__main__':
 
     user.execute()
 
-    # print(user._placeholder)
+    node = Table('node').create()
+    node.options(caching='hellow', comment='hou mou')
+    node.execute()
+
+    print(node._placeholder)
