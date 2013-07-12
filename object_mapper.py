@@ -1,18 +1,5 @@
 import re
 
-#
-# class Base(object):
-#
-#     def __init__(self):
-#         _default_keyspace = 'demodb'
-#         _placeholder = dict()
-#         # _cql_commands = dict()
-#         _main_query = ''
-#
-#     def execute(self):
-#         string = Render().render(self)
-#         return string
-
 
 class Table(object):
     def __init__(self, table_name, keyspace=None):
@@ -22,27 +9,37 @@ class Table(object):
 
         keyspace = keyspace if keyspace is not None else __default_keyspace
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name
-        # self.Create = CreateTable
 
-    def create(self, *args, **kwargs):
-        return CreateTable(self, args, **kwargs)
+        # self.addColumn = Column(self).addColumn
+        # self.setPrimaryKey = Column(self).setPrimaryKey
 
-
-class CreateTable(object):
-    def __init__(self, obj, *args, **kwargs):
+    def create(self):
         """
         _cql_commands is a dictionary containing Lexical structures of cql commands.
         <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
 
         """
-        self._placeholder = obj._placeholder
+        # self._placeholder = obj._placeholder
         self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
 
         self.addColumn = Column(self).addColumn
         self.setPrimaryKey = Column(self).setPrimaryKey
 
-        if args or kwargs:
-            self.options(*args, **kwargs)
+        return self
+
+    def alter(self):
+        """
+        _cql_commands is a dictionary containing Lexical structures of cql commands.
+        <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
+
+        """
+        # self._placeholder = obj._placeholder
+        self._main_query = 'ALTER TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
+
+        self.addColumn = Column(self).addColumn
+        self.setPrimaryKey = Column(self).setPrimaryKey
+
+        return self
 
     def options(self, *args, **kwargs):
         optionsList = ('compression', 'compaction', 'compact', 'bloom_filter_fp_chance', 'caching', 'comment',
@@ -67,15 +64,6 @@ class CreateTable(object):
     def execute(self):
         string = Render().render(self)
         return string
-
-
-class AlterTable():
-    def __init__(self):
-        self._main_query = 'ALTER TABLE %(_TABLE_)s'
-
-
-class TableOptions():
-    pass
 
 
 class Column():
@@ -317,32 +305,8 @@ class Render():
 
 
 if __name__ == '__main__':
-    user = Table('user').create()
+    user = Table('user')
     user.addColumn('uid', 'uuid')
-
-    user.addColumn({'uid': 'uuid', 'email': 'text'})
-
-    user.addColumn().type_ascii('char')
-
-    user.addColumn().type_varchar('username')
-
-    user.addColumn().type_text('email', 'set')
-
-    user.addColumn().type_list('fav_post', 'varchar')
-
-    user.addColumn().type_map('todo', ('timestamp', 'text'))
-
-    user.addColumn({'name': 'varchar', 'email': 'text'})
-    user.addColumn().type_uuid('uid')
-    user.setPrimaryKey('uid')
-
-    user.addColumn({'name': 'varchar', 'email': 'text', 'phone': 'text'})
-    user.addColumn().type_uuid('uid')
-    user.setPrimaryKey('uid', 'email')
-
-    user.setPrimaryKey('uid', 'email', 'phone')
-
-    user.setPrimaryKey(('uid', 'email'), 'username', 'phone')
 
     user.options({'compression': 'guys', 'compaction': 'guys'})
     user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'}, compact=True)
@@ -350,8 +314,7 @@ if __name__ == '__main__':
 
     user.execute()
 
-    node = Table('node').create()
-    node.options(caching='hellow', comment='hou mou')
-    node.execute()
+    node = Table('node').options(caching='hellow', comment='hou mou').create()
+    node.create().execute()
 
-    print(node._placeholder)
+    # print(node._placeholder)
