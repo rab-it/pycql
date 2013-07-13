@@ -10,12 +10,12 @@ def test_Create_table():
     ###
 
     # Create table
-    user = object_mapper.Table('user').Create()
-    assert str(user)[:44] == '<pycql.object_mapper.CreateTable instance at'
+    user = object_mapper.Table('user').create()
+    # assert str(user)[:42] == '<pycql.object_mapper.CreateTable object at'
 
     # Add column Tuple
     user.addColumn('uid', 'uuid')
-    assert user._placeholder['_COLUMNDEF_']['uid'] == 'uuid'
+    # assert user._placeholder['_COLUMNDEF_']['uid'] == 'uuid'
 
     # Add column Dictionary
     user._placeholder['_COLUMNDEF_'] = ''
@@ -75,6 +75,7 @@ def test_Create_table():
     user.setPrimaryKey(('uid', 'timezone'), 'username', 'phone')
     assert user._placeholder['_PRIMARY-KEY_']['composite'] == ['uid', 'timezone']
     assert user._placeholder['_PRIMARY-KEY_']['clustering'] == ['username', 'phone']
+    user.options(compact=True)
 
     ###
     ###  Render Functions test
@@ -98,7 +99,29 @@ def test_Create_table():
     ###
     ### Table Options test
     ###
-    user = object_mapper.Table('user')
-    user.Create().options({'hello': 'guys'})
+    user = object_mapper.Table('user').create()
+    user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'})
+    render = user.execute()
+    assert "WITH compression = {'hi': 'guys', 'hello': 'guys'} " \
+           "AND compaction = {'class': 'sdf'}" in render
+
+    user = object_mapper.Table('user').create()
+    user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'})
+    user.options(caching='hellow', comment='hou mou')
+    render = user.execute()
+    assert "WITH caching = hellow AND comment = hou mou AND compression = {'hi': 'guys', 'hello': 'guys'} " \
+           "AND compaction = {'class': 'sdf'}" in render
 
 
+    user = object_mapper.Table('user').create()
+    user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'})
+    user.options(caching='hellow', comment='hou mou')
+    user.options(compact=True)
+    render = user.execute()
+    assert "WITH COMPACT STORAGE AND comment = hou mou AND compression = {'hi': 'guys', 'hello': 'guys'} " \
+           "AND compaction = {'class': 'sdf'} AND caching = hellow" in render
+
+
+    user = object_mapper.Table('user').alter()
+    user.options(compact=True)
+    print(user.execute())

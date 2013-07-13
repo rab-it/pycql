@@ -9,49 +9,54 @@ class Table(object):
 
         keyspace = keyspace if keyspace is not None else __default_keyspace
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name
+        self._query = ''
 
-        # self.addColumn = Column(self).addColumn
-        # self.setPrimaryKey = Column(self).setPrimaryKey
+    def setMainQuery(self, query):
+        self._main_query = query
 
     def create(self):
-        """
-        _cql_commands is a dictionary containing Lexical structures of cql commands.
-        <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
-
-        """
-        # self._placeholder = obj._placeholder
-        self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
-
-        self.addColumn = Column(self).addColumn
-        self.setPrimaryKey = Column(self).setPrimaryKey
-
-        return self
+        return CreateTable(self)
 
     def alter(self):
+        return AlterTable(self)
+
+    def execute(self):
+        string = Render().render(self)
+        return string
+
+
+class CreateTable(Table):
+
+    def __init__(self, obj):
         """
         _cql_commands is a dictionary containing Lexical structures of cql commands.
         <_VAR_> Means required lookups. [CONST <_VAR_>] means optional lookups
 
         """
-        # self._placeholder = obj._placeholder
-        self._main_query = 'ALTER TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
+        self._placeholder = obj._placeholder
+        self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
+        # super(CreateTable, self).setMainQuery(self._main_query)
 
         self.addColumn = Column(self).addColumn
         self.setPrimaryKey = Column(self).setPrimaryKey
+        self.options = TableOptions(self).setOptions
 
-        return self
 
-    def options(self, *args, **kwargs):
-        optionsList = ('compression', 'compaction', 'compact', 'bloom_filter_fp_chance', 'caching', 'comment',
+class TableOptions(object):
+    def __init__(self, obj):
+        self._main_query = obj._main_query
+        self._placeholder = obj._placeholder
+        self.optionsList = ('compression', 'compaction', 'compact', 'bloom_filter_fp_chance', 'caching', 'comment',
                        'dclocal_read_repair_chance', 'gc_grace_seconds', 'read_repair_chance', 'replicate_on_write')
 
+    def setOptions(self, *args, **kwargs):
         if args and isinstance(args[0], dict):
             for k, v in args[0].items():
-                if k not in optionsList:
+                if k not in self.optionsList:
                     raise Exception('Invalid option')
         elif kwargs:
             for k, v in kwargs.items():
-                if k not in optionsList:
+                if k not in self.optionsList:
                     raise Exception('Invalid option')
 
             if '_OPTIONS_' in self._placeholder:
@@ -61,12 +66,19 @@ class Table(object):
 
         return self
 
-    def execute(self):
-        string = Render().render(self)
-        return string
+
+class AlterTable(Table):
+    def __init__(self, obj):
+
+        self._placeholder = obj._placeholder
+        self._main_query = 'ALTER TABLE %(_TABLE_)s %(<_OPTIONS_>)s'
+
+        self.addColumn = Column(self).addColumn
+        self.setPrimaryKey = Column(self).setPrimaryKey
+        self.options = TableOptions(self).setOptions
 
 
-class Column():
+class Column(object):
 
     def __init__(self, obj):
         self._main_query = obj._main_query
@@ -305,8 +317,32 @@ class Render():
 
 
 if __name__ == '__main__':
-    user = Table('user')
+    user = Table('user').create()
     user.addColumn('uid', 'uuid')
+
+    user.addColumn({'uid': 'uuid', 'email': 'text'})
+
+    user.addColumn().type_ascii('char')
+
+    user.addColumn().type_varchar('username')
+
+    user.addColumn().type_text('email', 'set')
+
+    user.addColumn().type_list('fav_post', 'varchar')
+
+    user.addColumn().type_map('todo', ('timestamp', 'text'))
+
+    user.addColumn({'name': 'varchar', 'email': 'text'})
+    user.addColumn().type_uuid('uid')
+    user.setPrimaryKey('uid')
+
+    user.addColumn({'name': 'varchar', 'email': 'text', 'phone': 'text'})
+    user.addColumn().type_uuid('uid')
+    user.setPrimaryKey('uid', 'email')
+
+    user.setPrimaryKey('uid', 'email', 'phone')
+
+    user.setPrimaryKey(('uid', 'email'), 'username', 'phone')
 
     user.options({'compression': 'guys', 'compaction': 'guys'})
     user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'}, compact=True)
@@ -314,7 +350,8 @@ if __name__ == '__main__':
 
     user.execute()
 
-    node = Table('node').options(caching='hellow', comment='hou mou').create()
-    node.create().execute()
+    node = Table('node').create()
+    node.options(caching='hellow', comment='hou mou')
+    node.execute()
 
     # print(node._placeholder)
