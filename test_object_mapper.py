@@ -3,7 +3,7 @@ __author__ = 'rabit'
 import object_mapper
 
 
-def test_Create_table():
+def test_create_table():
 
     ###
     ### Add column test
@@ -121,6 +121,8 @@ def test_Create_table():
     assert "WITH COMPACT STORAGE AND comment = hou mou AND compression = {'hi': 'guys', 'hello': 'guys'} " \
            "AND compaction = {'class': 'sdf'} AND caching = hellow" in render
 
+
+def test_alter_table():
     ###
     ### Table Alter Test
     ###
@@ -146,3 +148,39 @@ def test_Create_table():
     render = user.execute()
     assert render == 'ALTER TABLE monsters.adamsFamily ALTER lastKnownLocation TYPE map<uuid, text> ' \
                      'WITH COMPACT STORAGE'
+
+    # Add column
+    user = object_mapper.Table('addamsFamily', 'monsters').alter()
+    user.addColumn('gravesite', 'varchar')
+    render = user.execute()
+    assert render.strip() == 'ALTER TABLE monsters.addamsFamily ADD gravesite varchar'
+
+    # Add column
+    user = object_mapper.Table('addamsFamily', 'monsters').alter()
+    user.addColumn('top_places', 'list<text>')
+    render = user.execute()
+    assert render.strip() == 'ALTER TABLE monsters.addamsFamily ADD top_places list<text>'
+
+    # Add column
+    user = object_mapper.Table('addamsFamily', 'monsters').alter()
+    user.addColumn().type_text('top_places', 'list')
+    render = user.execute()
+    assert render.strip() == 'ALTER TABLE monsters.addamsFamily ADD top_places list<text>'
+
+    # Add column
+    user = object_mapper.Table('addamsFamily', 'monsters').alter()
+    user.addColumn().type_list('top_places', 'text')
+    render = user.execute()
+    assert render.strip() == 'ALTER TABLE monsters.addamsFamily ADD top_places list<text>'
+
+    # Drop column
+    user = object_mapper.Table('addamsFamily', 'monsters').alter()
+    user.dropColumn('gender')
+    render = user.execute()
+    assert render.strip() == 'ALTER TABLE monsters.addamsFamily DROP gender'
+
+    # Rename column
+    user = object_mapper.Table('addamsFamily', 'monsters').alter()
+    user.renameColumn('gender', 'gonder')
+    render = user.execute()
+    assert render.strip() == 'ALTER TABLE monsters.addamsFamily RENAME gender TO gonder'

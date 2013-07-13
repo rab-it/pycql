@@ -229,30 +229,41 @@ class AlterColumn(Column):
         elif collection == 'map' and isinstance(cql_type, tuple):
             cql_type = collection + '<' + ', '.join(cql_type) + '>'
 
-        self._placeholder['_ALTER-COLUMN_'] = (name, cql_type)
+        self._placeholder[self._placeholder['cql-type']] = (name, cql_type)
 
     def alterColumn(self, *columns):
         """
         These changes to a column type are not allowed:
-        * Changing the type of a clustering column.
-        * Changing columns on which an index is defined.
+            * Changing the type of a clustering column.
+            * Changing columns on which an index is defined.
 
         :param columns:
         :return: :raise:
         """
+        self._placeholder['cql-type'] = '_ALTER-COLUMN_'
         if columns and len(columns) == 2:
             self._placeholder['_ALTER-COLUMN_'] = columns
             # Todo validate cql-type and string
         return self
 
     def addColumn(self, *columns):
-        pass
+        """
+        These additions to a table are not allowed:
+            * Adding a column having the same name as an existing column.
+            * Adding columns to tables defined with COMPACT STORAGE.
+        """
+        self._placeholder['cql-type'] = '_ADD-COLUMN_'
+        if columns and len(columns) == 2:
+            self._placeholder['_ADD-COLUMN_'] = columns
+            # Todo validate cql-type and string
+        return self
 
-    def dropColumn(self, columns):
-        pass
+    def dropColumn(self, column):
+        self._placeholder['_DROP-COLUMN_'] = column
 
-    def renameColumn(self, column):
-        pass
+    def renameColumn(self, *columns):
+        if columns:
+            self._placeholder['_RENAME-COLUMN_'] = columns
 
 
 class Render(object):
@@ -302,11 +313,16 @@ class Render(object):
 
     def __renderAlter(self):
         if '_ALTER-COLUMN_' in self._placeholder:
-            return self.__renderAlterColumn()
-
-    def __renderAlterColumn(self):
-        column = self._placeholder['_ALTER-COLUMN_']
-        return 'ALTER ' + column[0] + ' TYPE ' + column[1]
+            column = self._placeholder['_ALTER-COLUMN_']
+            return 'ALTER ' + column[0] + ' TYPE ' + column[1]
+        if '_ADD-COLUMN_' in self._placeholder:
+            column = self._placeholder['_ADD-COLUMN_']
+            return 'ADD ' + column[0] + ' ' + column[1]
+        if '_DROP-COLUMN_' in self._placeholder:
+            return 'DROP ' + self._placeholder['_DROP-COLUMN_']
+        if '_RENAME-COLUMN_' in self._placeholder:
+            column = self._placeholder['_RENAME-COLUMN_']
+            return 'RENAME ' + column[0] + ' TO ' + column[1]
 
     def __validatePK(self):
         if '_PRIMARY-KEY_' in self._placeholder and 'composite' in self._placeholder['_PRIMARY-KEY_']:
