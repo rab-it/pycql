@@ -112,8 +112,8 @@ def test_Create_table():
     assert "WITH caching = hellow AND comment = hou mou AND compression = {'hi': 'guys', 'hello': 'guys'} " \
            "AND compaction = {'class': 'sdf'}" in render
 
-
     user = object_mapper.Table('user').create()
+    user.addColumn('uid', 'uuid')
     user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'})
     user.options(caching='hellow', comment='hou mou')
     user.options(compact=True)
@@ -121,7 +121,28 @@ def test_Create_table():
     assert "WITH COMPACT STORAGE AND comment = hou mou AND compression = {'hi': 'guys', 'hello': 'guys'} " \
            "AND compaction = {'class': 'sdf'} AND caching = hellow" in render
 
+    ###
+    ### Table Alter Test
+    ###
 
-    user = object_mapper.Table('user').alter()
+    # Alter Column
+    user = object_mapper.Table('adamsFamily', 'monsters').alter()
+    user.alterColumn('lastKnownLocation', 'uuid')
     user.options(compact=True)
-    print(user.execute())
+    render = user.execute()
+    assert render == 'ALTER TABLE monsters.adamsFamily ALTER lastKnownLocation TYPE uuid WITH COMPACT STORAGE'
+
+    # Alter Column with type syntax
+    user = object_mapper.Table('adamsFamily', 'monsters').alter()
+    user.alterColumn().type_uuid('lastKnownLocation')
+    user.options(compact=True)
+    render = user.execute()
+    assert render == 'ALTER TABLE monsters.adamsFamily ALTER lastKnownLocation TYPE uuid WITH COMPACT STORAGE'
+
+    # Alter column with map type
+    user = object_mapper.Table('adamsFamily', 'monsters').alter()
+    user.alterColumn().type_map('lastKnownLocation', ('uuid', 'text'))
+    user.options(compact=True)
+    render = user.execute()
+    assert render == 'ALTER TABLE monsters.adamsFamily ALTER lastKnownLocation TYPE map<uuid, text> ' \
+                     'WITH COMPACT STORAGE'

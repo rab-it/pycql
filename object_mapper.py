@@ -35,10 +35,9 @@ class CreateTable(Table):
         """
         self._placeholder = obj._placeholder
         self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
-        # super(CreateTable, self).setMainQuery(self._main_query)
 
-        self.addColumn = Column(self).addColumn
-        self.setPrimaryKey = Column(self).setPrimaryKey
+        self.addColumn = CreateColumn(self).addColumn
+        self.setPrimaryKey = CreateColumn(self).setPrimaryKey
         self.options = TableOptions(self).setOptions
 
 
@@ -71,10 +70,12 @@ class AlterTable(Table):
     def __init__(self, obj):
 
         self._placeholder = obj._placeholder
-        self._main_query = 'ALTER TABLE %(_TABLE_)s %(<_OPTIONS_>)s'
+        self._main_query = 'ALTER TABLE %(_TABLE_)s %(<_ALTER_>)s %(<_OPTIONS_>)s'
 
-        self.addColumn = Column(self).addColumn
-        self.setPrimaryKey = Column(self).setPrimaryKey
+        self.alterColumn = AlterColumn(self).alterColumn
+        self.addColumn = AlterColumn(self).addColumn
+        self.renameColumn = AlterColumn(self).renameColumn
+        self.dropColumn = AlterColumn(self).dropColumn
         self.options = TableOptions(self).setOptions
 
 
@@ -84,12 +85,79 @@ class Column(object):
         self._main_query = obj._main_query
         self._placeholder = obj._placeholder
 
-    def __setPlaceholderKey(self, key, value_type):
+    def _setCqlType(self, name, cql_type, collection=None):
+        pass
+
+    def type_ascii(self, name, collection=None):
+        self._setCqlType(name, 'ascii', collection)
+
+    def type_bigint(self, name, collection=None):
+        self._setCqlType(name, 'bigint', collection)
+
+    def type_blob(self, name, collection=None):
+        self._setCqlType(name, 'blob', collection)
+
+    def type_boolean(self, name, collection=None):
+        self._setCqlType(name, 'boolean', collection)
+
+    def type_counter(self, name, collection=None):
+        self._setCqlType(name, 'counter', collection)
+
+    def type_decimal(self, name, collection=None):
+        self._setCqlType(name, 'decimal', collection)
+
+    def type_double(self, name, collection=None):
+        self._setCqlType(name, 'double', collection)
+
+    def type_float(self, name, collection=None):
+        self._setCqlType(name, 'float', collection)
+
+    def type_inet(self, name, collection=None):
+        self._setCqlType(name, 'inet', collection)
+
+    def type_int(self, name, collection=None):
+        self._setCqlType(name, 'int', collection)
+
+    def type_text(self, name, collection=None):
+        self._setCqlType(name, 'text', collection)
+
+    def type_timestamp(self, name, collection=None):
+        self._setCqlType(name, 'timestamp', collection)
+
+    def type_uuid(self, name, collection=None):
+        self._setCqlType(name, 'uuid', collection)
+
+    def type_timeuuid(self, name, collection=None):
+        self._setCqlType(name, 'timeuuid', collection)
+
+    def type_varchar(self, name, collection=None):
+        self._setCqlType(name, 'varchar', collection)
+
+    def type_varint(self, name, collection=None):
+        self._setCqlType(name, 'varint', collection)
+
+    # Method for set, list and map
+    def type_list(self, name, cql_type):
+        self._setCqlType(name, cql_type, 'list')
+
+    def type_set(self, name, cql_type):
+        self._setCqlType(name, cql_type, 'set')
+
+    def type_map(self, name, cql_type):
+        self._setCqlType(name, cql_type, 'map')
+
+    def addColumn(self, *columns):
+        return self
+
+
+class CreateColumn(Column):
+
+    def _setPlaceholderKey(self, key, value_type):
         if key not in self._placeholder or not self._placeholder[key]:
             # if provided key is not available or if the value is empty
             self._placeholder[key] = value_type
 
-    def __setCqlType(self, name, cql_type, collection=None):
+    def _setCqlType(self, name, cql_type, collection=None):
         """
         Type function to set cql data type of Columns
 
@@ -97,7 +165,7 @@ class Column(object):
         :param cql_type: String (general) or Tuple (if collection == 'map')
         :param collection: 'set' | 'list'
         """
-        self.__setPlaceholderKey('_COLUMNDEF_', dict())
+        self._setPlaceholderKey('_COLUMNDEF_', dict())
 
         if collection in ('set', 'list'):
             cql_type = str(collection) + '<' + str(cql_type) + '>'
@@ -108,64 +176,6 @@ class Column(object):
 
         self._placeholder['_COLUMNDEF_'].update({name: cql_type})
 
-    def type_ascii(self, name, collection=None):
-        self.__setCqlType(name, 'ascii', collection)
-
-    def type_bigint(self, name, collection=None):
-        self.__setCqlType(name, 'bigint', collection)
-
-    def type_blob(self, name, collection=None):
-        self.__setCqlType(name, 'blob', collection)
-
-    def type_boolean(self, name, collection=None):
-        self.__setCqlType(name, 'boolean', collection)
-
-    def type_counter(self, name, collection=None):
-        self.__setCqlType(name, 'counter', collection)
-
-    def type_decimal(self, name, collection=None):
-        self.__setCqlType(name, 'decimal', collection)
-
-    def type_double(self, name, collection=None):
-        self.__setCqlType(name, 'double', collection)
-
-    def type_float(self, name, collection=None):
-        self.__setCqlType(name, 'float', collection)
-
-    def type_inet(self, name, collection=None):
-        self.__setCqlType(name, 'inet', collection)
-
-    def type_int(self, name, collection=None):
-        self.__setCqlType(name, 'int', collection)
-
-    def type_text(self, name, collection=None):
-        self.__setCqlType(name, 'text', collection)
-
-    def type_timestamp(self, name, collection=None):
-        self.__setCqlType(name, 'timestamp', collection)
-
-    def type_uuid(self, name, collection=None):
-        self.__setCqlType(name, 'uuid', collection)
-
-    def type_timeuuid(self, name, collection=None):
-        self.__setCqlType(name, 'timeuuid', collection)
-
-    def type_varchar(self, name, collection=None):
-        self.__setCqlType(name, 'varchar', collection)
-
-    def type_varint(self, name, collection=None):
-        self.__setCqlType(name, 'varint', collection)
-
-    # Method for set, list and map
-    def type_list(self, name, cql_type):
-        self.__setCqlType(name, cql_type, 'list')
-
-    def type_set(self, name, cql_type):
-        self.__setCqlType(name, cql_type, 'set')
-
-    def type_map(self, name, cql_type):
-        self.__setCqlType(name, cql_type, 'map')
-
     def addColumn(self, *columns):
         """
         Add columns to dictionary. All key and values will be rendered when execute is called.
@@ -174,7 +184,7 @@ class Column(object):
         :return: :raise:
         """
         if columns:
-            self.__setPlaceholderKey('_COLUMNDEF_', dict())
+            self._setPlaceholderKey('_COLUMNDEF_', dict())
 
             if isinstance(columns[0], str) and len(columns) == 2:
                 self._placeholder['_COLUMNDEF_'].update({columns[0]: columns[1]})
@@ -189,14 +199,6 @@ class Column(object):
                 raise Exception("Invalid Column Definition")
 
         return self
-
-    def alterColumn(self):
-        # Todo
-        pass
-
-    def delColumn(self):
-        # Todo
-        pass
 
     def setPrimaryKey(self, *keys):
         self._placeholder['_PRIMARY-KEY_'] = dict()
@@ -218,7 +220,42 @@ class Column(object):
                 self._placeholder['_PRIMARY-KEY_']['clustering'].append(key)
 
 
-class Render():
+class AlterColumn(Column):
+
+    def _setCqlType(self, name, cql_type, collection=None):
+
+        if collection in ('set', 'list'):
+            cql_type = str(collection) + '<' + str(cql_type) + '>'
+        elif collection == 'map' and isinstance(cql_type, tuple):
+            cql_type = collection + '<' + ', '.join(cql_type) + '>'
+
+        self._placeholder['_ALTER-COLUMN_'] = (name, cql_type)
+
+    def alterColumn(self, *columns):
+        """
+        These changes to a column type are not allowed:
+        * Changing the type of a clustering column.
+        * Changing columns on which an index is defined.
+
+        :param columns:
+        :return: :raise:
+        """
+        if columns and len(columns) == 2:
+            self._placeholder['_ALTER-COLUMN_'] = columns
+            # Todo validate cql-type and string
+        return self
+
+    def addColumn(self, *columns):
+        pass
+
+    def dropColumn(self, columns):
+        pass
+
+    def renameColumn(self, column):
+        pass
+
+
+class Render(object):
 
     def validate(self):
         pass
@@ -229,6 +266,7 @@ class Render():
                      '_COLUMNDEF_': self.__renderColumndef(),
                      '_PRIMARY-KEY_': self.__renderPK(),
                      '_OPTIONS_': self.__renderOptions(),
+                     '_ALTER_': self.__renderAlter(),
                      }
 
         return functions
@@ -261,6 +299,14 @@ class Render():
             return ', '.join(['%s %s' % (key, value) for (key, value) in self._placeholder['_COLUMNDEF_'].items()])
         else:
             return ''
+
+    def __renderAlter(self):
+        if '_ALTER-COLUMN_' in self._placeholder:
+            return self.__renderAlterColumn()
+
+    def __renderAlterColumn(self):
+        column = self._placeholder['_ALTER-COLUMN_']
+        return 'ALTER ' + column[0] + ' TYPE ' + column[1]
 
     def __validatePK(self):
         if '_PRIMARY-KEY_' in self._placeholder and 'composite' in self._placeholder['_PRIMARY-KEY_']:
@@ -314,7 +360,6 @@ class Render():
         render = query_with_placeholders % self._placeholders()
         print (render)
         return render
-
 
 if __name__ == '__main__':
     user = Table('user').create()
