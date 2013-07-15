@@ -123,15 +123,22 @@ class RenderQuery(Render):
                      '_ORDER_': self.__renderOrder(),
                      '_LIMIT_': self.__renderLimit(),
                      '_ALLOW-FILTERING_': self.__renderAllowFiltering(),
+                     '_USING_': self.__renderUsing(),
                      }
 
         return functions
 
+    def __renderUsing(self):
+        if '_USING_' not in self._placeholder:
+            return ''
+        elif isinstance(self._placeholder['_USING_'], int):
+            return "USING TIMESTAMP " + str(self._placeholder['_USING_']) + ' '
+
     def __renderExpr(self):
         if '_EXPR_' not in self._placeholder:
-            return '*'
+            return ''
         elif isinstance('_EXPR', str):
-            return self._placeholder['_EXPR_']
+            return self._placeholder['_EXPR_'] + ' '
 
     def __renderWhere(self):
         if '_WHERE_' not in self._placeholder:

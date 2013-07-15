@@ -121,6 +121,39 @@ def test_select():
     assert query.execute().strip() == "SELECT title FROM playlists WHERE artist = 'Fu Manchu'"
 
 
+def test_delete():
+
+    query = Query('Planeteers').delete('col1', 'col2', 'col3').where('userID', 'Captain')
+    assert query.execute().strip() == "DELETE col1, col2, col3 FROM Planeteers WHERE userID = 'Captain'"
+
+    query = Query('MastersOfTheUniverse').delete().where('mastersID', ('Man-At-Arms', 'Teela'), 'IN')
+    assert query.execute().strip() == "DELETE FROM MastersOfTheUniverse WHERE mastersID IN ('Man-At-Arms', 'Teela')"
+
+    query = Query('users').delete('email', 'phone').using(1318452291034).where('user_name', 'jsmith')
+    assert query.execute().strip() == "DELETE email, phone FROM users USING TIMESTAMP 1318452291034 " \
+                                      "WHERE user_name = 'jsmith'"
+
+    query = Query('SomeTable').delete('col1').where('userID', 'some_key_value')
+    assert query.execute().strip() == "DELETE col1 FROM SomeTable WHERE userID = 'some_key_value'"
+
+    query = Query('SomeTable').delete('col1').where('userID', '(key1, key2)', 'IN', True)
+    assert query.execute().strip() == "DELETE col1 FROM SomeTable WHERE userID IN (key1, key2)"
+
+    query = Query('users').delete('phone').where('user_name', ('jdoe', 'jsmith'), 'IN')
+    assert query.execute().strip() == "DELETE phone FROM users WHERE user_name IN ('jdoe', 'jsmith')"
+
+    query = Query('users').delete("todo ['2012-9-24']").where('user_id', 'frodo')
+    assert query.execute().strip() == "DELETE todo ['2012-9-24'] FROM users WHERE user_id = 'frodo'"
+
+    query = Query('users').delete("top_places[3]").where('user_id', 'frodo')
+    assert query.execute().strip() == "DELETE top_places[3] FROM users WHERE user_id = 'frodo'"
+
+    query = Query('users').delete("emails").where('user_id', 'frodo')
+    assert query.execute().strip() == "DELETE emails FROM users WHERE user_id = 'frodo'"
+
+    query = Query('users').delete("name").where('userID', 'user2')
+    assert query.execute().strip() == "DELETE name FROM users WHERE userID = 'user2'"
+
 
 
 

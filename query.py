@@ -11,6 +11,7 @@ class Query(object):
 
         self.insert = Insert(self).insert
         self.select = Select(self).select
+        self.delete = Delete(self).delete
 
     def execute(self):
         return RenderQuery().render(self)
@@ -19,13 +20,16 @@ class Query(object):
 class Select(Query):
     def __init__(self, obj):
         self._placeholder = obj._placeholder
-        self._main_query = "SELECT %(_EXPR_)s FROM %(_TABLE_)s " \
+        self._main_query = "SELECT %(_EXPR_)sFROM %(_TABLE_)s " \
                            "%(_WHERE_)s%(_ORDER_)s" \
                            "%(_LIMIT_)s%(_ALLOW-FILTERING_)s"
 
     def select(self, *columns):
-        if columns and isinstance(columns[0], str):
+        if not columns:
+            self._placeholder['_EXPR_'] = '*'
+        elif columns and isinstance(columns[0], str):
             self._placeholder['_EXPR_'] = ', '.join(columns)
+            print self._placeholder['_EXPR_']
         elif columns and isinstance(columns[0], (tuple, list, set)):
             self._placeholder['_EXPR_'] = ', '.join(columns[0])
         return self
@@ -111,5 +115,37 @@ class Insert(Query):
             duration *= 86400
 
         self._placeholder['_OPTIONS_'] = dict({'_TTL_': duration})
+
+        return self
+
+
+class Delete(Query):
+    def __init__(self, obj):
+        self._placeholder = obj._placeholder
+        self._main_query = "DELETE %(_EXPR_)sFROM %(_TABLE_)s " \
+                           "%(_USING_)s%(_WHERE_)s"
+
+    def delete(self, *columns):
+        if columns and isinstance(columns[0], str):
+            self._placeholder['_EXPR_'] = ', '.join(columns)
+        elif columns and isinstance(columns[0], (tuple, list, set)):
+            self._placeholder['_EXPR_'] = ', '.join(columns[0])
+        return self
+
+    def where(self, key, value, comparator='=', no_string=False):
+        if not isinstance(key, str):
+            raise Exception("Compare key type mismatched")
+
+        if '_WHERE_' not in self._placeholder:
+            self._placeholder['_WHERE_'] = list()
+
+        self._placeholder['_WHERE_'].append((key, value, comparator, no_string))
+
+        return self
+
+    def using(self, timestamp):
+        timestamp = int(timestamp)
+
+        self._placeholder['_USING_'] = timestamp
 
         return self
