@@ -10,6 +10,24 @@ class Render(object):
 
     def _placeholders(self):
 
+        functions = {'_TABLE_': self._placeholder['_TABLE_']}
+
+        return functions
+
+    def render(self, obj):
+
+        self._placeholder = obj._placeholder
+        self._main_query = obj._main_query
+
+        render = self._main_query % self._placeholders()
+        print (render)
+        return render
+
+
+class RenderManagers(Render):
+
+    def _placeholders(self):
+
         functions = {'_TABLE_': self._placeholder['_TABLE_'],
                      '_COLUMNDEF_': self.__renderColumndef(),
                      '_PRIMARY-KEY_': self.__renderPK(),
@@ -100,15 +118,6 @@ class Render(object):
         pk += ')'
 
         return pk
-
-    def render(self, obj):
-
-        self._placeholder = obj._placeholder
-        self._main_query = obj._main_query
-
-        render = self._main_query % self._placeholders()
-        print (render)
-        return render
 
 
 class RenderQuery(Render):

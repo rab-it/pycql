@@ -184,3 +184,11 @@ def test_alter_table():
     user.renameColumn('gender', 'gonder')
     render = user.execute()
     assert render.strip() == 'ALTER TABLE monsters.addamsFamily RENAME gender TO gonder'
+
+
+def test_drop_table():
+
+    node = object_mapper.Table('worldSeriesAttendees').drop()
+    assert node.execute() == "DROP TABLE worldSeriesAttendees"
+
+

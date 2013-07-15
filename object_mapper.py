@@ -1,6 +1,6 @@
 __author__ = 'rabit'
 
-from render import Render
+from render import RenderManagers
 
 
 class Table(object):
@@ -9,8 +9,10 @@ class Table(object):
         __default_keyspace = 'demodb'
         self._placeholder = dict()
 
-        keyspace = keyspace if keyspace is not None else __default_keyspace
-        self._placeholder['_TABLE_'] = keyspace + '.' + table_name
+        # keyspace = keyspace if keyspace is not None else __default_keyspace
+        # self._placeholder['_TABLE_'] = keyspace + '.' + table_name
+
+        self._placeholder['_TABLE_'] = keyspace + '.' + table_name if keyspace else table_name
         self._query = ''
 
     def create(self):
@@ -19,8 +21,11 @@ class Table(object):
     def alter(self):
         return AlterTable(self)
 
+    def drop(self):
+        return DropTable(self)
+
     def execute(self):
-        string = Render().render(self)
+        string = RenderManagers().render(self)
         return string
 
 
@@ -33,11 +38,17 @@ class CreateTable(Table):
 
         """
         self._placeholder = obj._placeholder
-        self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(<_COLUMNDEF_>)s, %(<_PRIMARY-KEY_>)s ) %(<_OPTIONS_>)s'
+        self._main_query = 'CREATE TABLE %(_TABLE_)s ( %(_COLUMNDEF_)s, %(_PRIMARY-KEY_)s ) %(_OPTIONS_)s'
 
         self.addColumn = CreateColumn(self).addColumn
         self.setPrimaryKey = CreateColumn(self).setPrimaryKey
         self.options = TableOptions(self).setOptions
+
+
+class DropTable(Table):
+    def __init__(self, obj):
+        self._placeholder = obj._placeholder
+        self._main_query = 'DROP TABLE %(_TABLE_)s'
 
 
 class TableOptions(object):
@@ -69,7 +80,7 @@ class AlterTable(Table):
     def __init__(self, obj):
 
         self._placeholder = obj._placeholder
-        self._main_query = 'ALTER TABLE %(_TABLE_)s %(<_ALTER_>)s %(<_OPTIONS_>)s'
+        self._main_query = 'ALTER TABLE %(_TABLE_)s %(_ALTER_)s %(_OPTIONS_)s'
 
         self.alterColumn = AlterColumn(self).alterColumn
         self.addColumn = AlterColumn(self).addColumn
