@@ -106,13 +106,7 @@ class Render(object):
         self._placeholder = obj._placeholder
         self._main_query = obj._main_query
 
-        pattern_query_placeholder = r'<(_[A-Z-]*?_)>'
-
-        query_with_placeholders = re.sub(pattern_query_placeholder, r'\1', self._main_query)
-
-        print query_with_placeholders
-
-        render = query_with_placeholders % self._placeholders()
+        render = self._main_query % self._placeholders()
         print (render)
         return render
 
@@ -136,6 +130,8 @@ class RenderQuery(Render):
     def __renderExpr(self):
         if '_EXPR_' not in self._placeholder:
             return '*'
+        elif isinstance('_EXPR', str):
+            return self._placeholder['_EXPR_']
 
     def __renderWhere(self):
         if '_WHERE_' not in self._placeholder:
@@ -145,23 +141,33 @@ class RenderQuery(Render):
 
         for n, tuples in enumerate(self._placeholder['_WHERE_']):
 
-            value = wrapStr(tuples[1], "'") if isinstance(tuples[1], str) else str(tuples[1])
+            if isinstance(tuples[1], str) and not tuples[3] and tuples[0][-6:] != '__uuid':
+                value = wrapStr(tuples[1], "'")
+            else:
+                value = str(tuples[1])
 
             self._placeholder['_WHERE_'][n] = str(tuples[0]) + wrapStr(str(tuples[2]), ' ') + value
 
-        return 'WHERE ' + ' and '.join(self._placeholder['_WHERE_'])
+        return 'WHERE ' + ' AND '.join(self._placeholder['_WHERE_']) + ' '
 
     def __renderOrder(self):
         if '_ORDER_' not in self._placeholder:
             return ''
 
+        order = self._placeholder['_ORDER_']
+
+        return 'ORDER BY ' + order[0] + ' ' + order[1].upper() + ' '
+
     def __renderLimit(self):
         if '_LIMIT_' not in self._placeholder:
             return ''
+        return 'LIMIT ' + self._placeholder['_LIMIT_'] + ' '
 
     def __renderAllowFiltering(self):
         if '_ALLOW-FILTERING_' not in self._placeholder:
             return ''
+        else:
+            return 'ALLOW FILTERING'
 
     def __renderIdentifier(self):
         if '_IDENTIFIER_' not in self._placeholder:
@@ -173,17 +179,17 @@ class RenderQuery(Render):
         identifier = self._placeholder['_IDENTIFIER_']
         key = list()
         value = list()
-        wrapQuote = lambda string: "'" + str(string) + "'"
+        wrapStr = lambda string, wrapper: wrapper + str(string) + wrapper
 
         for k, v in identifier.items():
-            key.append(k[1:]) if k[:1] == '!' else key.append(k)
+            key.append(k)
             if not isinstance(v, (list, set, dict)):
-                value.append(str(v) if k[:1] == '!' else wrapQuote(v))
+                value.append(str(v) if k[-6:] == '__uuid' or not isinstance(v, str) else wrapStr(v, "'"))
             elif isinstance(v, set):
-                v = '{' + ', '.join(list(v) if k[:1] == '!' else [wrapQuote(item) for item in v]) + '}'
+                v = '{' + ', '.join(list(v) if k[-6:] == '__uuid' else [wrapStr(item, "'") for item in v]) + '}'
                 value.append(v)
             elif isinstance(v, list):
-                v = '{' + ', '.join(list(v) if k[:1] == '!' else [wrapQuote(item) for item in v]) + '}'
+                v = '[' + ', '.join(list(v) if k[-6:] == '__uuid' else [wrapStr(item, "'") for item in v]) + ']'
                 value.append(v)
             elif isinstance(v, dict):
                 value.append(str(v))
