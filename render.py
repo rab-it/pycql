@@ -110,6 +110,8 @@ class Render(object):
 
         query_with_placeholders = re.sub(pattern_query_placeholder, r'\1', self._main_query)
 
+        print query_with_placeholders
+
         render = query_with_placeholders % self._placeholders()
         print (render)
         return render
@@ -122,13 +124,49 @@ class RenderQuery(Render):
                      '_IDENTIFIER_': self.__renderIdentifier(),
                      '_VALUES_': self.__renderValues(),
                      '_OPTIONS_': self.__renderOptions(),
+                     '_EXPR_': self.__renderExpr(),
+                     '_WHERE_': self.__renderWhere(),
+                     '_ORDER_': self.__renderOrder(),
+                     '_LIMIT_': self.__renderLimit(),
+                     '_ALLOW-FILTERING_': self.__renderAllowFiltering(),
                      }
 
         return functions
 
+    def __renderExpr(self):
+        if '_EXPR_' not in self._placeholder:
+            return '*'
+
+    def __renderWhere(self):
+        if '_WHERE_' not in self._placeholder:
+            return ''
+
+        wrapStr = lambda string, wrapper: wrapper + str(string) + wrapper
+
+        for n, tuples in enumerate(self._placeholder['_WHERE_']):
+
+            value = wrapStr(tuples[1], "'") if isinstance(tuples[1], str) else str(tuples[1])
+
+            self._placeholder['_WHERE_'][n] = str(tuples[0]) + wrapStr(str(tuples[2]), ' ') + value
+
+        return 'WHERE ' + ' and '.join(self._placeholder['_WHERE_'])
+
+    def __renderOrder(self):
+        if '_ORDER_' not in self._placeholder:
+            return ''
+
+    def __renderLimit(self):
+        if '_LIMIT_' not in self._placeholder:
+            return ''
+
+    def __renderAllowFiltering(self):
+        if '_ALLOW-FILTERING_' not in self._placeholder:
+            return ''
+
     def __renderIdentifier(self):
         if '_IDENTIFIER_' not in self._placeholder:
-            raise Exception('Identifier missing in query')
+            # raise Exception('Identifier missing in query')
+            return ''
         elif not isinstance(self._placeholder['_IDENTIFIER_'], dict):
             raise Exception('Dictonay type expected')
 
@@ -141,7 +179,10 @@ class RenderQuery(Render):
             key.append(k[1:]) if k[:1] == '!' else key.append(k)
             if not isinstance(v, (list, set, dict)):
                 value.append(str(v) if k[:1] == '!' else wrapQuote(v))
-            elif isinstance(v, (set, list)):
+            elif isinstance(v, set):
+                v = '{' + ', '.join(list(v) if k[:1] == '!' else [wrapQuote(item) for item in v]) + '}'
+                value.append(v)
+            elif isinstance(v, list):
                 v = '{' + ', '.join(list(v) if k[:1] == '!' else [wrapQuote(item) for item in v]) + '}'
                 value.append(v)
             elif isinstance(v, dict):
@@ -153,9 +194,11 @@ class RenderQuery(Render):
     def __renderValues(self):
 
         if '_VALUES_' not in self._placeholder:
-            self.__renderIdentifier()
+            value = self.__renderIdentifier()
+        else:
+            value = self._placeholder['_VALUES_']
 
-        return self._placeholder['_VALUES_']
+        return value
 
     def __renderOptions(self):
         if '_OPTIONS_' in self._placeholder and '_TTL_' in self._placeholder['_OPTIONS_']:

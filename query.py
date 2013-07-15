@@ -10,9 +10,34 @@ class Query(object):
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name if keyspace else table_name
 
         self.insert = Insert(self).insert
+        self.select = Select(self).select
 
     def execute(self):
         return RenderQuery().render(self)
+
+
+class Select(Query):
+    def __init__(self, obj):
+        self._placeholder = obj._placeholder
+        self._main_query = obj._main_query
+
+    def select(self, *args):
+
+        self._main_query = "SELECT %(<_EXPR_>)s FROM %(_TABLE_)s " \
+                           "%(<_WHERE_>)s %(<_ORDER_>)s " \
+                           "%(<_LIMIT_>)s %(<_ALLOW-FILTERING_>)s"
+        return self
+
+    def compare(self, key, value, comparator='='):
+        if not isinstance(key, str):
+            raise Exception("Compare key type mismatched")
+
+        if '_WHERE_' not in self._placeholder:
+            self._placeholder['_WHERE_'] = list()
+
+        self._placeholder['_WHERE_'].append((key, value, comparator))
+
+        return self
 
 
 class Insert(Query):
