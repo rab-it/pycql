@@ -3,17 +3,48 @@ __author__ = 'rabit'
 from render import RenderManagers
 
 
+class Keyspace(object):
+    def __init__(self, keyspace):
+
+        self._placeholder = dict()
+
+        self._placeholder['_KEYSPACE_'] = keyspace
+        self._main_query = "CREATE KEYSPACE %(_KEYSPACE_)s WITH %(_REPLICATION_)s%(_DURABLE-WRITES_)s"
+
+    def replication(self, map):
+        if not isinstance(map, dict):
+            raise TypeError("Datatype mismatch. Dictionary expected")
+        elif 'class' in map and map['class'] not in ('SimpleStrategy', 'NetworkTopologyStrategy'):
+            raise ValueError("Replication factor 'class' contains unsupported value")
+        elif 'replication_factor' in map and not isinstance(map['replication_factor'], int):
+            raise ValueError("Replication factor must be integer")
+
+        self._placeholder['_REPLICATION_'] = map
+
+        return self
+
+    def durableWrites(self, value=True):
+        self._placeholder['_DURABLE-WRITES_'] = str(value).lower()
+        return self
+
+    def create(self):
+        if '_KEYSPACE_' not in self._placeholder or '_REPLICATION_' not in self._placeholder:
+            raise Exception("keyspace name and replication factor must be defined")
+
+        return RenderManagers().render(self)
+
+
+
 class Table(object):
     def __init__(self, table_name, keyspace=None):
 
-        __default_keyspace = 'demodb'
         self._placeholder = dict()
 
+        # __default_keyspace = 'demodb'
         # keyspace = keyspace if keyspace is not None else __default_keyspace
         # self._placeholder['_TABLE_'] = keyspace + '.' + table_name
 
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name if keyspace else table_name
-        self._query = ''
 
     def create(self):
         return CreateTable(self)
@@ -274,44 +305,3 @@ class AlterColumn(Column):
     def renameColumn(self, *columns):
         if columns:
             self._placeholder['_RENAME-COLUMN_'] = columns
-
-
-if __name__ == '__main__':
-    user = Table('user').create()
-    user.addColumn('uid', 'uuid')
-
-    user.addColumn({'uid': 'uuid', 'email': 'text'})
-
-    user.addColumn().type_ascii('char')
-
-    user.addColumn().type_varchar('username')
-
-    user.addColumn().type_text('email', 'set')
-
-    user.addColumn().type_list('fav_post', 'varchar')
-
-    user.addColumn().type_map('todo', ('timestamp', 'text'))
-
-    user.addColumn({'name': 'varchar', 'email': 'text'})
-    user.addColumn().type_uuid('uid')
-    user.setPrimaryKey('uid')
-
-    user.addColumn({'name': 'varchar', 'email': 'text', 'phone': 'text'})
-    user.addColumn().type_uuid('uid')
-    user.setPrimaryKey('uid', 'email')
-
-    user.setPrimaryKey('uid', 'email', 'phone')
-
-    user.setPrimaryKey(('uid', 'email'), 'username', 'phone')
-
-    user.options({'compression': 'guys', 'compaction': 'guys'})
-    user.options(compression={'hello': 'guys', 'hi': 'guys'}, compaction={'class': 'sdf'}, compact=True)
-    user.options(caching='hellow', comment='hou mou')
-
-    user.execute()
-
-    node = Table('node').create()
-    node.options(caching='hellow', comment='hou mou')
-    node.execute()
-
-    # print(node._placeholder)

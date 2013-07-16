@@ -28,14 +28,29 @@ class RenderManagers(Render):
 
     def _placeholders(self):
 
-        functions = {'_TABLE_': self._placeholder['_TABLE_'],
+        functions = {'_TABLE_': self._placeholder['_TABLE_'] if '_TABLE_' in self._placeholder else '',
+                     '_KEYSPACE_': self._placeholder['_KEYSPACE_'] if '_KEYSPACE_' in self._placeholder else '',
                      '_COLUMNDEF_': self.__renderColumndef(),
                      '_PRIMARY-KEY_': self.__renderPK(),
                      '_OPTIONS_': self.__renderOptions(),
                      '_ALTER_': self.__renderAlter(),
+                     '_REPLICATION_': self.__renderReplication(),
+                     '_DURABLE-WRITES_': self.__renderDurableWrites(),
                      }
 
         return functions
+
+    def __renderReplication(self):
+        if '_REPLICATION_' not in self._placeholder:
+            return ''
+
+        return 'REPLICATION = ' + str(self._placeholder['_REPLICATION_']) + ' '
+
+    def __renderDurableWrites(self):
+        if '_DURABLE-WRITES_' not in self._placeholder:
+            return ''
+
+        return 'AND DURABLE_WRITES = ' + self._placeholder['_DURABLE-WRITES_']
 
     def __renderOptions(self):
 
@@ -78,6 +93,8 @@ class RenderManagers(Render):
         if '_RENAME-COLUMN_' in self._placeholder:
             column = self._placeholder['_RENAME-COLUMN_']
             return 'RENAME ' + column[0] + ' TO ' + column[1]
+        else:
+            return ''
 
     def __validatePK(self):
         if '_PRIMARY-KEY_' in self._placeholder and 'composite' in self._placeholder['_PRIMARY-KEY_']:
