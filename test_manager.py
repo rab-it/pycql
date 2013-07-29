@@ -294,24 +294,6 @@ def test_create_keyspace():
 
 
 def test_create_user():
-    ''
-    "CREATE USER spillman WITH PASSWORD 'Niner27';"
-    "CREATE USER akers WITH PASSWORD 'Niner2' SUPERUSER;"
-    "CREATE USER boone WITH PASSWORD 'Niner75' NOSUPERUSER;"
-    "CREATE USER test NOSUPERUSER;"
-
-
-
-def test_grant():
-    ''
-    "GRANT SELECT ON ALL KEYSPACES TO spillman;"
-    "GRANT MODIFY ON KEYSPACE field TO akers;"
-    "GRANT ALTER ON KEYSPACE forty9ers TO boone;"
-    "GRANT ALL PERMISSIONS ON ravens.plays TO boone;"
-    "GRANT ALL ON KEYSPACE keyspace_name TO user_name"
-
-
-def test_create_user():
     """
     "CREATE USER spillman WITH PASSWORD 'Niner27';"
     "CREATE USER akers WITH PASSWORD 'Niner2' SUPERUSER;"

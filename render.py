@@ -121,6 +121,7 @@ class RenderManagers(Render):
 
         if '_PRIMARY-KEY_' not in self._placeholder:
             return pk
+            # raise ValueError("Primary Key Should be defined")
 
         self.__validatePK()
 

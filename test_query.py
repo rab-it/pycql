@@ -51,6 +51,10 @@ def test_insert():
                                       "VALUES ( 62c36092-82a1-3a00-93d1-46196ee77204, 'Tres Hombres', 1, 'ZZ Top', 'La Grange', "\
                                       "a3e64f8f-bd44-4f28-b8d9-6938726e34d4 )"
 
+    data = {'empid': 104,
+            'deptid': 15}
+    query = Query('emp').insert(data)
+    assert query.execute().strip() == "INSERT INTO emp ( empid, deptid ) VALUES ( 104, 15 )"
 
     "INSERT INTO playlists (id, song_order, song_id, title, artist, album) VALUES (62c36092-82a1-3a00-93d1-46196ee77204, 1, a3e64f8f-bd44-4f28-b8d9-6938726e34d4, 'La Grange', 'ZZ Top', 'Tres; Hombres')"
     "INSERT INTO playlists (id, song_order, song_id, title, artist, album) VALUES (62c36092-82a1-3a00-93d1-46196ee77204, 2, 8a172618-b121-4136-bb10-f665cfc469eb, 'Moving in Stereo', 'Fu Manchu', 'We Must Obey')"
@@ -138,16 +142,11 @@ def test_select():
     query = Query('playlists').select('title').compare( 'artist', 'Fu Manchu')
     assert query.execute().strip() == "SELECT title FROM playlists WHERE artist = 'Fu Manchu'"
 
+    query = Query('People').select()
+    assert query.execute().strip() == "SELECT * FROM People"
 
 
     """
-    SELECT * from People
-    SELECT COUNT(*) FROM users
-    SELECT COUNT(*) FROM big_table LIMIT 200000
-    SELECT * FROM ruling_stewards WHERE king = 'Brego' AND reign_start >= 2450 AND reign_start < 2500 ALLOW FILTERING
-    Select * FROM ruling_stewards WHERE king = 'none' AND reign_start >= 1500 AND reign_start < 3000 LIMIT 10 ALLOW FILTERING
-    SELECT * FROM periods WHERE TOKEN(period_name) > TOKEN('Third Age') AND TOKEN(period_name) < TOKEN('Fourth Age')
-    SELECT * FROM playlists WHERE id = 62c36092-82a1-3a00-93d1-46196ee77204 ORDER BY song_order DESC LIMIT 50
     SELECT user_id, emails FROM users WHERE user_id = 'frodo'
     SELECT WRITETIME (first_name) FROM users WHERE last_name = 'Jones'
     SELECT * from system.schema_keyspaces
@@ -209,19 +208,41 @@ def test_update():
     query = Query('Movies').update(data).where('movieID', 'key1', '=', True)
     assert query.execute().strip() == "UPDATE Movies SET col2 = val2, col1 = val1 WHERE movieID = key1"
 
-    # data = {'user_name', "'bob'"}
-    #
-    # query = Query('clicks', 'excelsior').update(data).where('userid', 'cfd66ccc-d857', '=', True).ttl(432000)
-    # assert query.execute().strip() == "UPDATE excelsior.clicks USING TTL 432000 SET user_name = 'bob' " \
-    #                                   "WHERE userid = cfd66ccc-d857"
+    data = {'user_name': "'bob'"}
+
+    query = Query('clicks', 'excelsior').update(data).where('userid', 'cfd66ccc-d857', '=', True).ttl(432000)
+    assert query.execute().strip() == "UPDATE excelsior.clicks USING TTL 432000 SET user_name = 'bob' " \
+                                      "WHERE userid = cfd66ccc-d857"
+
+    data = {'total': 'total + 2'}
+    query = Query('UserActionCounts').update(data).where('keyalias', 523)
+    assert query.execute().strip() == "UPDATE UserActionCounts SET total = total + 2 WHERE keyalias = 523"
+
+    data = {'user_name': "'bob'"}
+    query = Query('clicks', 'excelsior').update(data).where('userid', 'cfd66ccc-d857-4e90-b1e5-df98a3d40cd6', '=', True)
+    query.where('url', 'http://google.com').ttl(432000)
+    assert query.execute().strip() == "UPDATE excelsior.clicks USING TTL 432000 SET user_name = 'bob' " \
+                                      "WHERE userid = cfd66ccc-d857-4e90-b1e5-df98a3d40cd6 AND url = 'http://google.com'"
+
+    data = {'col3': 'val3'}
+    query = Query('Movies').update(data).where('movieID', '(key1, key2, key3)', 'IN', True)
+    assert query.execute().strip() == "UPDATE Movies SET col3 = val3 WHERE movieID IN (key1, key2, key3)"
+
+    data = {'state': "'TX'"}
+    query = Query('users').update(data).where('user_uuid', '(88b8fd18-b1ed-4e96-bf79-4280797cba80, '
+                                                           '06a8913c-c0d6-477c-937d-6c1b69a95d43, '
+                                                           'bc108776-7cb5-477f-917d-869c12dfffa8)', 'IN', True)
+    assert query.execute().strip() == "UPDATE users SET state = 'TX' " \
+                                      "WHERE user_uuid IN (88b8fd18-b1ed-4e96-bf79-4280797cba80, " \
+                                      "06a8913c-c0d6-477c-937d-6c1b69a95d43, bc108776-7cb5-477f-917d-869c12dfffa8)"
+
+    data = {'col4': 22}
+    query = Query('Movies').update(data).where('movieID', 'key4', '=', True)
+    assert query.execute().strip() == "UPDATE Movies SET col4 = 22 WHERE movieID = key4"
+
+
 
     """
-    UPDATE UserActionCounts SET total = total + 2 WHERE keyalias = 523
-    UPDATE excelsior.clicks USING TTL 432000 SET user_name = 'bob' WHERE userid=cfd66ccc-d857-4e90-b1e5-df98a3d40cd6 AND url='http://google.com'
-    UPDATE Movies SET col1 = val1, col2 = val2 WHERE movieID = key1
-    UPDATE Movies SET col3 = val3 WHERE movieID IN (key1, key2, key3)
-    UPDATE Movies SET col4 = 22 WHERE movieID = key4
-    UPDATE users SET state = 'TX' WHERE user_uuid IN (88b8fd18-b1ed-4e96-bf79-4280797cba80, 06a8913c-c0d6-477c-937d-6c1b69a95d43, bc108776-7cb5-477f-917d-869c12dfffa8)
     UPDATE users SET name = 'John Smith', email = 'jsmith@cassie.com' WHERE user_uuid = 88b8fd18-b1ed-4e96-bf79-4280797cba80;
     UPDATE counterks.page_view_counts SET counter_value = counter_value + 2 WHERE url_name='www.datastax.com' AND page_name='home'
     UPDATE users SET emails = emails + {'fb@friendsofmordor.org'} WHERE user_id = 'frodo'

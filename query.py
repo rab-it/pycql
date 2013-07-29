@@ -1,6 +1,7 @@
 __author__ = 'rabit'
 
 from render import RenderQuery
+import connection
 
 
 class Query(object):
@@ -14,8 +15,15 @@ class Query(object):
         self.delete = Delete(self).delete
         self.update = Update(self).update
 
-    def execute(self):
-        return RenderQuery().render(self)
+    def execute(self, render=True):
+        rendered = RenderQuery().render(self)
+        if render:
+            return rendered
+        else:
+            connection.setup(['localhost:9160:demodb'])
+            query = connection.execute(rendered)
+            print ("Executed Successfully")
+            return query
 
 
 class Select(Query):

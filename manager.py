@@ -40,12 +40,14 @@ class Keyspace(object):
         self._main_query = "DROP KEYSPACE %(_KEYSPACE_)s"
         return self
 
-    def execute(self):
+    def execute(self, render=True):
         rendered = RenderManagers().render(self)
-        # return rendered
-        connection.setup(['localhost:9160:demodb'])
-        connection.execute(rendered)
-        print ("Hello")
+        if render:
+            return rendered
+        else:
+            connection.setup(['localhost:9160:demodb'])
+            connection.execute(rendered)
+            print ("Hello")
 
 
 
@@ -72,7 +74,7 @@ class Table(object):
     def drop(self):
         return DropTable(self)
 
-    def execute(self, render=False):
+    def execute(self, render=True):
         rendered = RenderManagers().render(self)
         if render:
             return rendered
