@@ -52,6 +52,24 @@ def test_insert():
                                       "a3e64f8f-bd44-4f28-b8d9-6938726e34d4 )"
 
 
+    "INSERT INTO playlists (id, song_order, song_id, title, artist, album) VALUES (62c36092-82a1-3a00-93d1-46196ee77204, 1, a3e64f8f-bd44-4f28-b8d9-6938726e34d4, 'La Grange', 'ZZ Top', 'Tres; Hombres')"
+    "INSERT INTO playlists (id, song_order, song_id, title, artist, album) VALUES (62c36092-82a1-3a00-93d1-46196ee77204, 2, 8a172618-b121-4136-bb10-f665cfc469eb, 'Moving in Stereo', 'Fu Manchu', 'We Must Obey')"
+    "INSERT INTO playlists (id, song_order, song_id, title, artist, album) VALUES (62c36092-82a1-3a00-93d1-46196ee77204, 3, 2b09185b-fb5a-4734-9b56-49077de9edbf, 'Outside Woman Blues', 'Back Door; Slam', 'Roll Away')"
+    '''
+    INSERT INTO emp (empID, deptID, first_name, last_name) VALUES (104, 15, 'jane', 'smith')
+    INSERT INTO Music.songs (id, title, artist, album) VALUES (a3e64f8f-bd44-4f28-b8d9-6938726e34d4, 'La Grange', 'ZZ Top', 'Tres Hombres')
+    INSERT INTO excelsior.clicks ( userid, url, date, name) VALUES ( 3715e600-2eb0-11e2-81c1-0800200c9a66, 'http://apache.org', '2013-10-09', 'Mary') USING TTL 86400
+    INSERT INTO excelsior.clicks ( userid, url, date, name) VALUES ( cfd66ccc-d857-4e90-b1e5-df98a3d40cd6, 'http://google.com', '2013-10-11', 'Bob' )
+    INSERT INTO users (user_name, password) VALUES ('cbrown', 'ch@ngem4a') USING TTL 86400
+    INSERT INTO users (todo) VALUES ( { '2013-9-22 12:01' : 'birthday wishes to Bilbo', '2013-10-1 18:00' : 'Check into Inn of Prancing Pony' })
+    INSERT INTO test (id, value_float, value_double) VALUES ('test1', -2.6034345E+38, -2.6034345E+38)
+
+
+
+    '''
+
+
+
 def test_select():
 
     query = Query('peers').select()
@@ -121,6 +139,32 @@ def test_select():
     assert query.execute().strip() == "SELECT title FROM playlists WHERE artist = 'Fu Manchu'"
 
 
+
+    """
+    SELECT * from People
+    SELECT COUNT(*) FROM users
+    SELECT COUNT(*) FROM big_table LIMIT 200000
+    SELECT * FROM ruling_stewards WHERE king = 'Brego' AND reign_start >= 2450 AND reign_start < 2500 ALLOW FILTERING
+    Select * FROM ruling_stewards WHERE king = 'none' AND reign_start >= 1500 AND reign_start < 3000 LIMIT 10 ALLOW FILTERING
+    SELECT * FROM periods WHERE TOKEN(period_name) > TOKEN('Third Age') AND TOKEN(period_name) < TOKEN('Fourth Age')
+    SELECT * FROM playlists WHERE id = 62c36092-82a1-3a00-93d1-46196ee77204 ORDER BY song_order DESC LIMIT 50
+    SELECT user_id, emails FROM users WHERE user_id = 'frodo'
+    SELECT WRITETIME (first_name) FROM users WHERE last_name = 'Jones'
+    SELECT * from system.schema_keyspaces
+    SELECT user_id, emails FROM users WHERE user_id = 'frodo'
+    SELECT user_id, top_places FROM users WHERE user_id = 'frodo'
+    SELECT user_id, todo FROM users WHERE user_id = 'frodo'
+    SELECT * FROM users WHERE gender = 'f' AND state = 'TX' AND birth_year > 1968 ALLOW FILTERING
+    SELECT * FROM test WHERE k > 42
+    SELECT * FROM test WHERE token(k) > token(42)
+    SELECT * FROM counterks.page_view_counts
+    SELECT * FROM MyTable
+    SELECT * FROM test
+
+    """
+
+
+
 def test_delete():
 
     query = Query('Planeteers').delete('col1', 'col2', 'col3').where('userID', 'Captain')
@@ -154,6 +198,50 @@ def test_delete():
     query = Query('users').delete("name").where('userID', 'user2')
     assert query.execute().strip() == "DELETE name FROM users WHERE userID = 'user2'"
 
+    """
+    DELETE session_token FROM users where pk = 'jsmith'
+    DELETE FROM users where pk = 'jsmith'
+    """
 
+def test_update():
+    data = {'col1': 'val1',
+            'col2': 'val2',}
+    query = Query('Movies').update(data).where('movieID', 'key1', '=', True)
+    assert query.execute().strip() == "UPDATE Movies SET col2 = val2, col1 = val1 WHERE movieID = key1"
+
+    # data = {'user_name', "'bob'"}
+    #
+    # query = Query('clicks', 'excelsior').update(data).where('userid', 'cfd66ccc-d857', '=', True).ttl(432000)
+    # assert query.execute().strip() == "UPDATE excelsior.clicks USING TTL 432000 SET user_name = 'bob' " \
+    #                                   "WHERE userid = cfd66ccc-d857"
+
+    """
+    UPDATE UserActionCounts SET total = total + 2 WHERE keyalias = 523
+    UPDATE excelsior.clicks USING TTL 432000 SET user_name = 'bob' WHERE userid=cfd66ccc-d857-4e90-b1e5-df98a3d40cd6 AND url='http://google.com'
+    UPDATE Movies SET col1 = val1, col2 = val2 WHERE movieID = key1
+    UPDATE Movies SET col3 = val3 WHERE movieID IN (key1, key2, key3)
+    UPDATE Movies SET col4 = 22 WHERE movieID = key4
+    UPDATE users SET state = 'TX' WHERE user_uuid IN (88b8fd18-b1ed-4e96-bf79-4280797cba80, 06a8913c-c0d6-477c-937d-6c1b69a95d43, bc108776-7cb5-477f-917d-869c12dfffa8)
+    UPDATE users SET name = 'John Smith', email = 'jsmith@cassie.com' WHERE user_uuid = 88b8fd18-b1ed-4e96-bf79-4280797cba80;
+    UPDATE counterks.page_view_counts SET counter_value = counter_value + 2 WHERE url_name='www.datastax.com' AND page_name='home'
+    UPDATE users SET emails = emails + {'fb@friendsofmordor.org'} WHERE user_id = 'frodo'
+    UPDATE users SET emails = emails - {'fb@friendsofmordor.org'} WHERE user_id = 'frodo'
+    UPDATE users SET emails = {} WHERE user_id = 'frodo'
+    UPDATE users SET todo = { '2012-9-24' : 'enter mordor', '2012-10-2 12:00' : 'throw ring into mount doom' } WHERE user_id = 'frodo'
+    UPDATE users SET todo['2012-10-2 12:10'] = 'die' WHERE user_id = 'frodo'
+    UPDATE users USING TTL <ttl value> SET todo['2012-10-1'] = 'find water' WHERE user_id = 'frodo'
+    UPDATE users SET top_places = [ 'rivendell', 'rohan' ] WHERE user_id = 'frodo'
+    UPDATE users SET top_places = [ 'the shire' ] + top_places WHERE user_id = 'frodo'
+    UPDATE users SET top_places = top_places + [ 'mordor' ] WHERE user_id = 'frodo'
+    UPDATE users SET top_places[2] = 'riddermark' WHERE user_id = 'frodo'
+    UPDATE users SET top_places = top_places - ['riddermark'] WHERE user_id = 'frodo'
+    UPDATE users USING TTL 432000 SET 'password' = 'ch@ngem4a' WHERE user_name = 'cbrown'
+    UPDATE users SET todo['2012-10-2 12:00'] = 'throw my precious into mount doom' WHERE user_id = 'frodo'
+    UPDATE users USING TTL <computed_ttl>
+    UPDATE counterks.page_view_counts SET counter_value = counter_value + 1 WHERE url_name='www.datastax.com' AND page_name='home'
+    UPDATE counterks.page_view_counts SET counter_value = counter_value + 2 WHERE url_name='www.datastax.com' AND page_name='home'
+    UPDATE MyTable SET SomeColumn = 'SomeValue' WHERE columnName = B70DE1D0-9908-4AE3-BE34-5573E5B09F14
+
+    """
 
 

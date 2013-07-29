@@ -12,6 +12,7 @@ class Query(object):
         self.insert = Insert(self).insert
         self.select = Select(self).select
         self.delete = Delete(self).delete
+        self.update = Update(self).update
 
     def execute(self):
         return RenderQuery().render(self)
@@ -147,5 +148,56 @@ class Delete(Query):
         timestamp = int(timestamp)
 
         self._placeholder['_USING_'] = timestamp
+
+        return self
+
+
+class Update(Query):
+    def __init__(self, obj):
+        self._placeholder = obj._placeholder
+        self._main_query = "UPDATE %(_TABLE_)s %(_OPTIONS_)s%(_SET_)s%(_WHERE_)s"
+
+    def update(self, data=None):
+        if not data:
+            return self
+        elif not isinstance(data, dict):
+            raise TypeError("Dictionary expected")
+
+        if '_SET_' not in self._placeholder:
+            self._placeholder['_SET_'] = list()
+
+        self._placeholder['_SET_'] += ['{} = {}'.format(k, v) for k, v in data.items()]
+        print(self._placeholder['_SET_'])
+
+        return self
+
+    def where(self, key, value, comparator='=', no_string=False):
+        if not isinstance(key, str):
+            raise Exception("Compare key type mismatched")
+
+        if '_WHERE_' not in self._placeholder:
+            self._placeholder['_WHERE_'] = list()
+
+        self._placeholder['_WHERE_'].append((key, value, comparator, no_string))
+
+        return self
+
+    def ttl(self, duration, human_readable='s'):
+        """
+        Set TTL (Time to Live) for a data
+
+        :param duration:
+        :param human_readable: [default 's'] calculate second from human readable time
+        :return:
+        """
+
+        if human_readable == 'min':
+            duration *= 60
+        elif human_readable == 'hr':
+            duration *= 3600
+        elif human_readable == 'day':
+            duration *= 86400
+
+        self._placeholder['_OPTIONS_'] = dict({'_TTL_': duration})
 
         return self

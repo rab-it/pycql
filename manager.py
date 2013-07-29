@@ -1,6 +1,7 @@
 __author__ = 'rabit'
 
 from render import RenderManagers
+import connection
 
 
 class Keyspace(object):
@@ -9,7 +10,7 @@ class Keyspace(object):
         self._placeholder = dict()
 
         self._placeholder['_KEYSPACE_'] = keyspace
-        self._main_query = "CREATE KEYSPACE %(_KEYSPACE_)s WITH %(_REPLICATION_)s%(_DURABLE-WRITES_)s"
+        self._main_query = ""
 
     def replication(self, map):
         if not isinstance(map, dict):
@@ -28,10 +29,23 @@ class Keyspace(object):
         return self
 
     def create(self):
-        if '_KEYSPACE_' not in self._placeholder or '_REPLICATION_' not in self._placeholder:
-            raise Exception("keyspace name and replication factor must be defined")
+        self._main_query = "CREATE KEYSPACE %(_KEYSPACE_)s WITH %(_REPLICATION_)s%(_DURABLE-WRITES_)s"
+        return self
 
-        return RenderManagers().render(self)
+    def alter(self):
+        self._main_query = "ALTER KEYSPACE %(_KEYSPACE_)s WITH %(_REPLICATION_)s%(_DURABLE-WRITES_)s"
+        return self
+
+    def drop(self):
+        self._main_query = "DROP KEYSPACE %(_KEYSPACE_)s"
+        return self
+
+    def execute(self):
+        rendered = RenderManagers().render(self)
+        # return rendered
+        connection.setup(['localhost:9160:demodb'])
+        connection.execute(rendered)
+        print ("Hello")
 
 
 
@@ -46,6 +60,9 @@ class Table(object):
 
         self._placeholder['_TABLE_'] = keyspace + '.' + table_name if keyspace else table_name
 
+        self.createIndex = Index(self).create
+        self.dropIndex = Index(self).drop
+
     def create(self):
         return CreateTable(self)
 
@@ -55,10 +72,14 @@ class Table(object):
     def drop(self):
         return DropTable(self)
 
-    def execute(self):
-        string = RenderManagers().render(self)
-        return string
-
+    def execute(self, render=False):
+        rendered = RenderManagers().render(self)
+        if render:
+            return rendered
+        else:
+            connection.setup(['localhost:9160:demodb'])
+            connection.execute(rendered)
+            print ("Hello")
 
 class CreateTable(Table):
 
@@ -305,3 +326,22 @@ class AlterColumn(Column):
     def renameColumn(self, *columns):
         if columns:
             self._placeholder['_RENAME-COLUMN_'] = columns
+
+
+class Index(Table):
+    def __init__(self, obj):
+        self._placeholder = obj._placeholder
+        self._main_query = ''
+
+    def create(self, name, col_name):
+        self._main_query = 'CREATE INDEX %(_INDEX_)sON %(_TABLE_)s (%(_COLUMN_)s)'
+
+        self._placeholder['_INDEX_'] = str(name) + ' ' if name else ''
+        self._placeholder['_COLUMN_'] = str(col_name)
+
+        return self
+
+    def drop(self, name):
+        self._main_query = 'DROP INDEX %(_INDEX_)s'
+        self._placeholder['_INDEX_'] = str(name)
+        return self

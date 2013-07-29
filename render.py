@@ -36,6 +36,8 @@ class RenderManagers(Render):
                      '_ALTER_': self.__renderAlter(),
                      '_REPLICATION_': self.__renderReplication(),
                      '_DURABLE-WRITES_': self.__renderDurableWrites(),
+                     '_INDEX_': self._placeholder['_INDEX_'] if '_INDEX_' in self._placeholder else '',
+                     '_COLUMN_': self._placeholder['_COLUMN_'] if '_COLUMN_' in self._placeholder else '',
                      }
 
         return functions
@@ -44,13 +46,15 @@ class RenderManagers(Render):
         if '_REPLICATION_' not in self._placeholder:
             return ''
 
-        return 'REPLICATION = ' + str(self._placeholder['_REPLICATION_']) + ' '
+        return 'REPLICATION = ' + str(self._placeholder['_REPLICATION_'])
 
     def __renderDurableWrites(self):
         if '_DURABLE-WRITES_' not in self._placeholder:
             return ''
 
-        return 'AND DURABLE_WRITES = ' + self._placeholder['_DURABLE-WRITES_']
+        dw = ' AND ' if '_REPLICATION_' in self._placeholder else ''
+
+        return dw + 'DURABLE_WRITES = ' + self._placeholder['_DURABLE-WRITES_']
 
     def __renderOptions(self):
 
@@ -150,9 +154,15 @@ class RenderQuery(Render):
                      '_LIMIT_': self.__renderLimit(),
                      '_ALLOW-FILTERING_': self.__renderAllowFiltering(),
                      '_USING_': self.__renderUsing(),
+                     '_SET_': self.__renderSet(),
                      }
 
         return functions
+
+    def __renderSet(self):
+        if '_SET_' not in self._placeholder:
+            return ''
+        return 'SET ' + ', '.join(self._placeholder['_SET_']) + ' '
 
     def __renderUsing(self):
         if '_USING_' not in self._placeholder:
@@ -241,6 +251,6 @@ class RenderQuery(Render):
 
     def __renderOptions(self):
         if '_OPTIONS_' in self._placeholder and '_TTL_' in self._placeholder['_OPTIONS_']:
-            return 'USING TTL ' + str(self._placeholder['_OPTIONS_']['_TTL_'])
+            return 'USING TTL ' + str(self._placeholder['_OPTIONS_']['_TTL_']) + ' '
         else:
             return ''
